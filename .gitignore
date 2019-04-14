@@ -1,0 +1,6 @@
+/target/*
+!/target/*.h
+!/target/*.c
+
+/ProcTraceInfo/*
+!/ProcTraceInfo/*.java
