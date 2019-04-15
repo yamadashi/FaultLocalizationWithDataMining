@@ -9,19 +9,19 @@ int main(int argc, char *argv[]) {
     int input[3];
     int expected;
 
-    //出力ファイル名
-    if ((fp = fopen(argv[0], "a") == NULL) {
-        printf("出力ファイルがオープンできませんでした\n");
+    //出力ファイル
+    if ((fp = fopen(argv[1], "a")) == NULL) {
+        printf("can't open output file\n");
         exit(1);
     }
 
     //入力の数値変換
     for (int i = 0; i < 3; i++) {
-        input[i] = atoi(argv[i+1]);
+        input[i] = atoi(argv[i+2]);
     }
-    expected = atoi(argv[4]);
+    expected = atoi(argv[5]);
     
-    int result = tritype(input[1], input[2], input[3]);
+    int result = tritype(input[0], input[1], input[2]);
     fprintf(fp, "%d,%d,", (result == expected), !(result==expected)); //成功,失敗,
 
     fclose(fp);
