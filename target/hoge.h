@@ -1,1 +1,0 @@
-int Trityp(int i, int j, int k);

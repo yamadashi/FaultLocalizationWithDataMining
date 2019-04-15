@@ -1,6 +1,6 @@
-#include "hoge.h"
+#include "tritype.h"
 
-int Trityp(int i, int j, int k)
+int tritype(int i, int j, int k)
 {
     int trityp;
     if ((i == 0) || (j == 0) || (k == 0))
