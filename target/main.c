@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
     //出力ファイル名
     if ((fp = fopen(argv[0], "a") == NULL) {
-        printf("結果ファイルがオープンできませんでした\n");
+        printf("出力ファイルがオープンできませんでした\n");
         exit(1);
     }
 
