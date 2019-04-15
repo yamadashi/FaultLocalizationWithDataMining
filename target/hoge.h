@@ -1,1 +1,1 @@
-int hoge(int arg);
+int Trityp(int i, int j, int k);
