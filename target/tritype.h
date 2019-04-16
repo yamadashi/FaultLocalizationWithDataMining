@@ -1,0 +1,1 @@
+int tritype(int i, int j, int k);
