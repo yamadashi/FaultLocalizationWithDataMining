@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd `dirname $0`
+stdpath=$PWD/`dirname $0`
 outputfile="testdata"
 
 function random() {
@@ -12,10 +12,10 @@ function output() {
     local input2=`random`
     local input3=`random`
 
-    echo -n "$input1 $input2 $input3 " >> $outputfile
+    echo -n "$input1 $input2 $input3 " >> $stdpath/$outputfile
 
     #main.exeで書き込みしている
-    ./src/main.exe $outputfile $input1 $input2 $input3
+    $stdpath/src/main.exe $outputfile $input1 $input2 $input3
 }
 
 for i in `seq 400`
