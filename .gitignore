@@ -8,5 +8,3 @@
 /testdata/src/*
 !/testdata/src/*.h
 !/testdata/src/*.c
-
-/data.csv
