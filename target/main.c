@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     expected = atoi(argv[5]);
     
     int result = tritype(input[0], input[1], input[2]);
-    fprintf(fp, "%d,%d,", (result == expected), !(result==expected)); //成功,失敗,
+    fprintf(fp, "%d,%d", (result == expected), !(result==expected)); //成功,失敗,
 
     fclose(fp);
 

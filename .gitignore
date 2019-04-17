@@ -4,3 +4,5 @@
 
 /ProcTraceInfo/*
 !/ProcTraceInfo/*.java
+
+/data.csv
