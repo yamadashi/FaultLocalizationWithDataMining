@@ -18,7 +18,7 @@ public class TraceInfoProcessor {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        List<Integer> passCounts = getPassCounts(reader);
+        List<Boolean> passFlags = getPassFlags(reader);
 
         try {
             reader.close();
@@ -34,9 +34,9 @@ public class TraceInfoProcessor {
             e.printStackTrace();
         }
 
-        for (Integer count : passCounts) {
+        for (Boolean passed : passFlags) {
             try {
-                writer.write("," + count);
+                writer.write("," + (passed ? 1 : 0));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -54,8 +54,8 @@ public class TraceInfoProcessor {
         }
     }
 
-    private static List<Integer> getPassCounts(BufferedReader r) {
-        List<Integer> passCounts = new ArrayList<>();
+    private static List<Boolean> getPassFlags(BufferedReader r) {
+        List<Boolean> passFlags = new ArrayList<>();
         String line = null;
 
         do {
@@ -80,19 +80,19 @@ public class TraceInfoProcessor {
             if (lineNum < 1)
                 continue;
 
-            // 行通過回数の取得
-            int passCount = 0;
+            // 行通過フラグ
+            boolean passed = false;
             try {
-                passCount = Integer.parseInt(tmp[0].trim());
+                passed = Integer.parseInt(tmp[0].trim()) > 0;
             } catch (NumberFormatException e) {
                 // "-","#####"の時通過回数は0
-                passCount = 0;
+                passed = false;
             }
 
-            passCounts.add(passCount); // passCounts[i]はi+1行目の通過数
+            passFlags.add(passed); // passCounts[i]はi+1行目の通過数
 
         } while (true);
 
-        return passCounts;
+        return passFlags;
     }
 }
