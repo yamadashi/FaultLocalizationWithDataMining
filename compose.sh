@@ -1,26 +1,31 @@
 #!/bin/sh
-
+#ビルドと任意ディレクトリからの実行
 outputfile="data.csv"
 covfile="tritype.c.gcov"
-testfile="test"
+testfile="testdata"
+#stdpath="${PWD}/`dirname $0`"
+stdpath=$PWD/`dirname $0`
 
 function func() {
-    cd `dirname $0`
-
-    cd target
-    gcc -coverage -o main main.c tritype.c
+    cd $stdpath/target
     ./main.exe ../$outputfile $1 $2 $3 $4
     gcov tritype.c > /dev/null
 
-    cd ../ProcTraceInfo
+    cd $stdpath/ProcTraceInfo
     java TraceInfoProcessor ../target/$covfile ../$outputfile
 
-    cd ../target
-    rm *.gcda *.gcno *.c.gcov
+    cd $stdpath/target
+    rm *.gcda *.c.gcov
 }
 
-cd `dirname $0`
-cat ./testdata/$testfile | while read line
+#ビルド
+cd $stdpath/target
+gcc -coverage -o main.exe main.c tritype.c
+cd $stdpath/ProcTraceInfo
+javac -encoding UTF8 TraceInfoProcessor.java
+
+#各テスト入力について実行
+cat $stdpath/testdata/$testfile | while read line
 do
     func $line
 done
