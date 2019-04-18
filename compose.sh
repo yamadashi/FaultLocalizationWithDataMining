@@ -1,5 +1,4 @@
 #!/bin/sh
-#ビルドと任意ディレクトリからの実行
 outputfile="data.csv"
 covfile="tritype.c.gcov"
 testfile="testdata"
