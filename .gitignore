@@ -1,10 +1,19 @@
-/target/*
-!/target/*.h
-!/target/*.c
+/CollectContext/target/*
+!/CollectContext/target/*.h
+!/CollectContext/target/*.c
 
-/ProcTraceInfo/*
-!/ProcTraceInfo/*.java
+/CollectContext/ProcTraceInfo/*
+!/CollectContext/ProcTraceInfo/*.java
 
-/testdata/src/*
-!/testdata/src/*.h
-!/testdata/src/*.c
+/CollectContext/testdata/src/*
+!/CollectContext/testdata/src/*.h
+!/CollectContext/testdata/src/*.c
+
+
+/CalcConcepts/bin/*
+
+/misc/Krajca-pcbo/*
+!/misc/Krajca-pcbo/*.c
+
+/misc/nagao/src/main/*
+!/misc/nagao/src/main/*.java
