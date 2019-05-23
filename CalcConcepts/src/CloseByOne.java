@@ -21,7 +21,7 @@ class CloseByOne {
 	private int conceptCount = 0; // 概念の数
 
 	private int[] upto = new int[INTSIZE];
-	private int[][][] cols = null; // 要説明
+	private int[][][] cols = null; // ある属性をもつオブジェクトの集合
 
 	public CloseByOne(String file, int minSupRate) {
 		context = readContext(file);
@@ -66,20 +66,19 @@ class CloseByOne {
 			minSupport = 1;
 		}
 		System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
-		intObjLen = (objNum + 1) / INTSIZE + 1; // 要説明
-		intAttrLen = (attrNum + 1) / INTSIZE + 1; // 要説明
+		intObjLen = (objNum + 1) / INTSIZE + 1; // 属性をintの各bitで管理したときに何個intが必要か
+		intAttrLen = (attrNum + 1) / INTSIZE + 1; // オブジェクトをintの各bitで管理したときに何個intが必要か
 
 		int[] context = new int[objNum * intAttrLen];
 		for (int i = 0; i < objNum; i++) {
 			int[] obj = buff.get(i);
 			for (int j = 0; j < obj.length; j++) {
-				context[i * intAttrLen + obj[j] / INTSIZE] |= BIT << ((INTSIZE - 1) - (obj[j] % INTSIZE)); // 要説明
+				context[i * intAttrLen + obj[j] / INTSIZE] |= BIT << (INTSIZE - (obj[j] % INTSIZE) - 1);
 			}
 		}
 		return context;
 	}
 
-	// 要説明
 	private void prepare() {
 
 		Concept.setProperties(intObjLen, intAttrLen);
@@ -93,13 +92,13 @@ class CloseByOne {
 		cols = new int[intAttrLen][INTSIZE][intObjLen];
 		supps = new int[intAttrLen][INTSIZE];
 
-		for (int j = 0; j < intAttrLen; j++) {
-			for (int i = INTSIZE - 1; i >= 0; i--) {
-				int mask = (BIT << i);
-				for (int x = 0, y = j; x < objNum; x++, y += intAttrLen) {
+		for (int i = 0; i < intAttrLen; i++) {
+			for (int j = INTSIZE - 1; j >= 0; j--) {
+				int mask = (BIT << j);
+				for (int x = 0, y = i; x < objNum; x++, y += intAttrLen) {
 					if ((context[y] & mask) != 0) {
-						cols[j][i][x / INTSIZE] |= BIT << (x % INTSIZE);
-						supps[j][i]++;
+						cols[i][j][x / INTSIZE] |= BIT << (x % INTSIZE);
+						supps[i][j]++;
 					}
 				}
 			}
@@ -111,18 +110,18 @@ class CloseByOne {
 		Concept top = computeClosure(initial, null).getFirst();
 
 		// 末尾bitを特別なフラグとして設定している？
-		// if ((top.getIntent()[intAttrLen - 1] & 1) != 0) {
-		// return;
-		// }
+		if ((top.getIntent()[intAttrLen - 1] & 1) != 0) {
+			return;
+		}
 
 		long startTime = System.currentTimeMillis();
-		generateFromNode(top, 0, INTSIZE - 1); // ?
+		generateFromNode(top, 0, INTSIZE - 1);
 		System.out.println(" mining time = " + (System.currentTimeMillis() - startTime));
 	}
 
 	private void generateFromNode(Concept concept, int start_int, int start_bit) {
 		int[] intent = concept.getIntent();
-		int current = start_int * INTSIZE + (INTSIZE - 1 - start_bit); // ?
+		int current = start_int * INTSIZE + (INTSIZE - 1 - start_bit);
 		for (; start_int < intAttrLen; start_int++) {
 			ATTR: for (; start_bit >= 0; start_bit--) {
 				// 最後の属性に到達したとき
@@ -150,20 +149,20 @@ class CloseByOne {
 				if (supp < minSupport) {
 					continue;
 				}
-				// if ((newIntent[intAttrLen - 1] & BIT) != 0) {
-				// continue;
-				// }
+				if ((newIntent[intAttrLen - 1] & BIT) != 0) {
+					continue;
+				}
 
 				conceptCount++;
 				Concept.printConcept(newConcept);
 
 				if (start_bit == 0) {
-					generateFromNode(newConcept, start_int + 1, INTSIZE - 1); // ?
+					generateFromNode(newConcept, start_int + 1, INTSIZE - 1);
 				} else {
 					generateFromNode(newConcept, start_int, start_bit - 1);
 				}
 			}
-			start_bit = INTSIZE - 1; // ?
+			start_bit = INTSIZE - 1;
 		}
 	}
 

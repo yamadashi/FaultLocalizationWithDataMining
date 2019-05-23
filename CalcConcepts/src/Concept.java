@@ -7,16 +7,13 @@ public class Concept {
     private static int nextID = 0;
     private static int intObjLen;
     private static int intAttrLen;
-    private static int INTSIZE = Integer.SIZE;
+    private static final int INTSIZE = Integer.SIZE;
+    private static final int BIT = 1;
 
     public Concept(int[] ex, int[] in) {
         this.extent = ex;
         this.intent = in;
         this.id = nextID++;
-    }
-
-    public int getID() {
-        return id;
     }
 
     public int[] getExtent() {
@@ -39,18 +36,18 @@ public class Concept {
 
     public static void printConcept(Concept concept) {
         String str = concept.id + ": { ";
-        for (int j = 0; j < intObjLen; ++j) {
-            for (int i = 0; i < INTSIZE; ++i) {
-                if ((concept.extent[j] & 1 << i) != 0) {
-                    str += ((i + j * (INTSIZE - 1)) + " "); // ?
+        for (int i = 0; i < intObjLen; i++) {
+            for (int j = 0; j < INTSIZE; j++) {
+                if ((concept.extent[i] & BIT << j) != 0) {
+                    str += ((j + i * (INTSIZE - 1)) + " "); // ?
                 }
             }
         }
         str += "} / { ";
-        for (int j = 0; j < intAttrLen; ++j) {
-            for (int i = 31; i >= 0; --i) {
-                if ((concept.intent[j] & 1 << i) != 0) {
-                    str += ((31 - i + j * (INTSIZE - 1)) + " "); // ?
+        for (int i = 0; i < intAttrLen; i++) {
+            for (int j = INTSIZE - 1; j >= 0; j--) {
+                if ((concept.intent[i] & BIT << j) != 0) {
+                    str += ((INTSIZE - j - 1 + i * (INTSIZE - 1)) + " "); // ?
                 }
             }
         }
