@@ -39,7 +39,7 @@ public class Concept {
         for (int i = 0; i < intObjLen; i++) {
             for (int j = 0; j < INTSIZE; j++) {
                 if ((concept.extent[i] & BIT << j) != 0) {
-                    str += ((j + i * (INTSIZE - 1)) + " "); // ?
+                    str += ((i * INTSIZE + j) + " ");
                 }
             }
         }
@@ -47,7 +47,7 @@ public class Concept {
         for (int i = 0; i < intAttrLen; i++) {
             for (int j = INTSIZE - 1; j >= 0; j--) {
                 if ((concept.intent[i] & BIT << j) != 0) {
-                    str += ((INTSIZE - j - 1 + i * (INTSIZE - 1)) + " "); // ?
+                    str += ((INTSIZE - j - 1 + i * (INTSIZE)) + " ");
                 }
             }
         }

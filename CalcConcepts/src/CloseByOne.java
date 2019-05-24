@@ -66,8 +66,8 @@ class CloseByOne {
 			minSupport = 1;
 		}
 		System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
-		intObjLen = (objNum + 1) / INTSIZE + 1; // 属性をintの各bitで管理したときに何個intが必要か
-		intAttrLen = (attrNum + 1) / INTSIZE + 1; // オブジェクトをintの各bitで管理したときに何個intが必要か
+		intObjLen = objNum / INTSIZE + 1; // 属性をintの各bitで管理したときに何個intが必要か
+		intAttrLen = attrNum / INTSIZE + 1; // オブジェクトをintの各bitで管理したときに何個intが必要か
 
 		int[] context = new int[objNum * intAttrLen];
 		for (int i = 0; i < objNum; i++) {
@@ -93,7 +93,7 @@ class CloseByOne {
 		supps = new int[intAttrLen][INTSIZE];
 
 		for (int i = 0; i < intAttrLen; i++) {
-			for (int j = INTSIZE - 1; j >= 0; j--) {
+			for (int j = 0; j < INTSIZE; j++) {
 				int mask = (BIT << j);
 				for (int x = 0, y = i; x < objNum; x++, y += intAttrLen) {
 					if ((context[y] & mask) != 0) {
@@ -108,11 +108,6 @@ class CloseByOne {
 	private void calcConcepts() {
 		Concept initial = Concept.createVoidConcept();
 		Concept top = computeClosure(initial, null).getFirst();
-
-		// 末尾bitを特別なフラグとして設定している？
-		if ((top.getIntent()[intAttrLen - 1] & 1) != 0) {
-			return;
-		}
 
 		long startTime = System.currentTimeMillis();
 		generateFromNode(top, 0, INTSIZE - 1);
@@ -147,9 +142,6 @@ class CloseByOne {
 				}
 				// 最小サポートを超えない場合
 				if (supp < minSupport) {
-					continue;
-				}
-				if ((newIntent[intAttrLen - 1] & BIT) != 0) {
 					continue;
 				}
 
