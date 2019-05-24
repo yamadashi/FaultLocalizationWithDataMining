@@ -1,3 +1,5 @@
+.vscode
+
 /CollectContext/target/*
 !/CollectContext/target/*.h
 !/CollectContext/target/*.c
