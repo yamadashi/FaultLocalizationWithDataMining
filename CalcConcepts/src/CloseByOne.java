@@ -11,17 +11,17 @@ class CloseByOne {
 
 	private int objNum = 0; // オブジェクト数
 	private int attrNum = 0; // 属性数
-	private int intObjLen = 0; // objNum / INTSIZE
-	private int intAttrLen = 0; // attrNum / INTSIZE
+	private int intObjLen = 0; // 属性をbitで管理したときに何個intが必要か
+	private int intAttrLen = 0; // オブジェクトをbitで管理したときに何個intが必要か
 	private int[] context = null; // 文脈
-	private int[][] supps = null; // 各属性のサポート
+	private int[] supps = null; // 各属性のサポート
 
 	private float minSupRate = 0.00f; // オブジェクト数の何％を最小サポートとするか
 	private int minSupport = 1; // 最小サポート
 	private int conceptCount = 0; // 概念の数
 
 	private int[] upto = new int[INTSIZE];
-	private int[][][] cols = null; // ある属性をもつオブジェクトの集合
+	private int[][] cols = null; // ある属性をもつオブジェクトの集合
 
 	public CloseByOne(String file, int minSupRate) {
 		context = readContext(file);
@@ -66,8 +66,8 @@ class CloseByOne {
 			minSupport = 1;
 		}
 		System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
-		intObjLen = objNum / INTSIZE + 1; // 属性をintの各bitで管理したときに何個intが必要か
-		intAttrLen = attrNum / INTSIZE + 1; // オブジェクトをintの各bitで管理したときに何個intが必要か
+		intObjLen = objNum / INTSIZE + 1;
+		intAttrLen = attrNum / INTSIZE + 1;
 
 		int[] context = new int[objNum * intAttrLen];
 		for (int i = 0; i < objNum; i++) {
@@ -89,16 +89,17 @@ class CloseByOne {
 			}
 		}
 
-		cols = new int[intAttrLen][INTSIZE][intObjLen];
-		supps = new int[intAttrLen][INTSIZE];
+		cols = new int[intAttrLen * INTSIZE][intObjLen];
+		supps = new int[intAttrLen * INTSIZE];
 
 		for (int i = 0; i < intAttrLen; i++) {
 			for (int j = 0; j < INTSIZE; j++) {
 				int mask = (BIT << j);
 				for (int x = 0, y = i; x < objNum; x++, y += intAttrLen) {
 					if ((context[y] & mask) != 0) {
-						cols[i][j][x / INTSIZE] |= BIT << (x % INTSIZE);
-						supps[i][j]++;
+						int attr = i * INTSIZE + (INTSIZE - j - 1);
+						cols[attr][x / INTSIZE] |= BIT << (x % INTSIZE);
+						supps[attr]++;
 					}
 				}
 			}
@@ -116,20 +117,21 @@ class CloseByOne {
 
 	private void generateFromNode(Concept concept, int start_int, int start_bit) {
 		int[] intent = concept.getIntent();
-		int current = start_int * INTSIZE + (INTSIZE - 1 - start_bit);
 		for (; start_int < intAttrLen; start_int++) {
 			ATTR: for (; start_bit >= 0; start_bit--) {
+				int current = start_int * INTSIZE + (INTSIZE - 1 - start_bit);
 				// 最後の属性に到達したとき
-				if (current++ >= attrNum) {
+				if (current >= attrNum) {
 					return;
 				}
 				// 属性をすでに内包として持っている場合、あるいは最小サポートを超えない場合
-				if (((intent[start_int] & (BIT << start_bit))) != 0 || (supps[start_int][start_bit] < minSupport)) {
+				int supp = supps[current];
+				if (((intent[start_int] & (BIT << start_bit))) != 0 || (supp < minSupport)) {
 					continue;
 				}
-				Pair<Concept, Integer> res = computeClosure(concept, cols[start_int][start_bit]);
+				Pair<Concept, Integer> res = computeClosure(concept, cols[current]);
 				Concept newConcept = res.getFirst();
-				int supp = res.getSecond().intValue();
+				int newSupp = res.getSecond().intValue();
 				int[] newIntent = newConcept.getIntent();
 				// conceptとnewConceptにおいて、現在走査中の属性までの内包が一致していない場合
 				for (int i = 0; i < start_int; i++) {
@@ -141,7 +143,7 @@ class CloseByOne {
 					continue;
 				}
 				// 最小サポートを超えない場合
-				if (supp < minSupport) {
+				if (newSupp < minSupport) {
 					continue;
 				}
 
