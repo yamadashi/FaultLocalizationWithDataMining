@@ -1,8 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 outputfile="data.csv"
 covfile="tritype.c.gcov"
 testfile="testdata"
-#stdpath="${PWD}/`dirname $0`"
 stdpath=$PWD/`dirname $0`
 
 function func() {
@@ -28,3 +27,7 @@ cat $stdpath/testdata/$testfile | while read line
 do
     func $line
 done
+
+
+# format:
+# Passed(bool), passLineNum1, passLineNum2, ....

@@ -18,7 +18,7 @@ public class TraceInfoProcessor {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        List<Boolean> passFlags = getPassFlags(reader);
+        List<Integer> passLineNums = getPassLineNums(reader);
 
         try {
             reader.close();
@@ -34,9 +34,9 @@ public class TraceInfoProcessor {
             e.printStackTrace();
         }
 
-        for (Boolean passed : passFlags) {
+        for (Integer lineNum : passLineNums) {
             try {
-                writer.write("," + (passed ? 1 : 0));
+                writer.write("," + lineNum);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -54,8 +54,9 @@ public class TraceInfoProcessor {
         }
     }
 
-    private static List<Boolean> getPassFlags(BufferedReader r) {
-        List<Boolean> passFlags = new ArrayList<>();
+    // 実行トレースの通過行を取得
+    private static List<Integer> getPassLineNums(BufferedReader r) {
+        List<Integer> passLineNums = new ArrayList<>();
         String line = null;
 
         do {
@@ -64,7 +65,8 @@ public class TraceInfoProcessor {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            if (line == null) break; // ダサい、リファクタリングできそう
+            if (line == null)
+                break; // ダサい、リファクタリングできそう
 
             String[] tmp = line.split(":", 3);
             if (tmp.length < 3)
@@ -89,10 +91,11 @@ public class TraceInfoProcessor {
                 passed = false;
             }
 
-            passFlags.add(passed); // passCounts[i]はi+1行目の通過数
+            if (passed)
+                passLineNums.add(lineNum);
 
         } while (true);
 
-        return passFlags;
+        return passLineNums;
     }
 }
