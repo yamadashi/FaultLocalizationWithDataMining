@@ -1,6 +1,6 @@
 
 // TODO
-// extentのビット順入れ替えたい prepare computeclosure readContext
+// extentのビット順入れ替えたい prepare computeclosure Concept
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,7 +26,6 @@ public class ExploreConcepts {
     private int attrNum = 0; // 属性数
     private int intObjLen = 0; // 属性をbitで管理したときに何個intが必要か
     private int intAttrLen = 0; // オブジェクトをbitで管理したときに何個intが必要か
-    private int[] supps = null; // 各属性のサポート
     private int[] upto = new int[INTSIZE];
     private int[][] objHas = null; // ある属性をもつオブジェクトの集合
 
@@ -161,7 +160,6 @@ public class ExploreConcepts {
         }
 
         objHas = new int[intAttrLen * INTSIZE][intObjLen];
-        supps = new int[intAttrLen * INTSIZE];
 
         for (int i = 0; i < intAttrLen; i++) {
             for (int j = 0; j < INTSIZE; j++) {
@@ -169,8 +167,7 @@ public class ExploreConcepts {
                 for (int x = 0, y = i; x < objNum; x++, y += intAttrLen) {
                     if ((context[y] & mask) != 0) {
                         int attr = i * INTSIZE + (INTSIZE - j - 1);
-                        objHas[attr][x / INTSIZE] |= BIT << (x % INTSIZE);
-                        supps[attr]++;
+                        objHas[attr][x / INTSIZE] |= BIT << (INTSIZE - (x % INTSIZE) - 1);
                     }
                 }
             }
@@ -191,7 +188,7 @@ public class ExploreConcepts {
                 extent[i] = BIT_MAX;
             }
             for (int i = 0; i < objNum % INTSIZE; i++) {
-                extent[intObjLen - 1] |= (BIT << i);
+                extent[intObjLen - 1] |= (BIT << (INTSIZE - i - 1));
             }
 
             for (int j = 0; j < objNum; ++j) {
@@ -203,7 +200,7 @@ public class ExploreConcepts {
                 extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
                 if (extent[k] != 0) { // 共通のオブジェクトがあった場合
                     for (int l = 0; l < INTSIZE; ++l) {
-                        if ((extent[k] & (BIT << l)) != 0) { // (k*INTSIZE+l)番目のオブジェクトが共通
+                        if ((extent[k] & (BIT << (INTSIZE - l - 1))) != 0) { // (k*INTSIZE+l)番目のオブジェクトが共通
                             for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j) {
                                 intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
                             }

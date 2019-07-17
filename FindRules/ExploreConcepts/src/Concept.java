@@ -23,9 +23,9 @@ public class Concept {
     public void print() {
         String str = "{ ";
         for (int i = 0; i < extent.length; i++) {
-            for (int j = 0; j < INTSIZE; j++) {
+            for (int j = INTSIZE - 1; j >= 0; j--) {
                 if ((extent[i] & BIT << j) != 0) {
-                    str += ((i * INTSIZE + j) + " ");
+                    str += ((INTSIZE - j - 1 + i * (INTSIZE)) + " ");
                 }
             }
         }

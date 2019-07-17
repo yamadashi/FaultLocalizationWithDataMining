@@ -1,7 +1,7 @@
 INPUT:=data/testdata
 #OUTPUT:=
 MINSUP:=2
-MINCONF:=0.75
+MINCONF:=0.5
 
 run:
 	javac -d ExploreConcepts/bin -cp ExploreConcepts/src ExploreConcepts/src/Main.java
