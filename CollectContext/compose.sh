@@ -29,5 +29,5 @@ do
 done
 
 
-# format:
-# Passed(bool), passLineNum1, passLineNum2, ....
+# context:
+# fail, pass, line1, line2, line3, ...

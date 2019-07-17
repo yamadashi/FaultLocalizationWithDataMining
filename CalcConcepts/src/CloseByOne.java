@@ -87,6 +87,7 @@ class CloseByOne {
 			for (int j = INTSIZE - 1; j > i; j--) {
 				upto[i] |= (BIT << j);
 			}
+			printBit(upto[i]);
 		}
 
 		cols = new int[intAttrLen * INTSIZE][intObjLen];
