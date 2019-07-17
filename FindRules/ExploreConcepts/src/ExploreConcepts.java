@@ -99,7 +99,10 @@ public class ExploreConcepts {
         boolean KEEP = sup >= minsupp && conf >= minconf;
         boolean CONTINUE = sup >= minsupp;
 
-        return new Pair<>(new Pair<>(KEEP, CONTINUE), new Pair<>(sup, conf));
+        Pair<Boolean, Boolean> flags = new Pair<>(KEEP, CONTINUE);
+        Pair<Integer, Float> info = new Pair<>(sup, conf);
+
+        return new Pair<>(flags, info);
     }
 
     // int[] の立っているbit数を数える
@@ -113,7 +116,7 @@ public class ExploreConcepts {
 
     private void readContext(String file) {
 
-        ArrayList<Set<Integer>> buff = new ArrayList<Set<Integer>>();
+        List<int[]> buff = new ArrayList<int[]>();
         int maxAttrIndex = 0;
 
         try {
@@ -121,10 +124,10 @@ public class ExploreConcepts {
             String line = "";
             while ((line = br.readLine()) != null) {
                 String[] splitLine = line.split(",");
-                Set<Integer> attrIndices = new HashSet<>();
-                for (int i = 0; i < splitLine.length; i++) {
+                int[] attrIndices = new int[splitLine.length];
+                for (int i = 0; i < attrIndices.length; i++) {
                     int attrIndice = Integer.parseInt(splitLine[i]);
-                    attrIndices.add(attrIndice);
+                    attrIndices[i] = attrIndice;
                     if (maxAttrIndex < attrIndice) {
                         maxAttrIndex = attrIndice;
                     }
@@ -144,8 +147,8 @@ public class ExploreConcepts {
 
         context = new int[objNum * intAttrLen];
         for (int i = 0; i < objNum; i++) {
-            Set<Integer> obj = buff.get(i);
-            for (Integer index : obj) {
+            int[] obj = buff.get(i);
+            for (int index : obj) {
                 context[i * intAttrLen + index / INTSIZE] |= BIT << (INTSIZE - (index % INTSIZE) - 1);
             }
         }
