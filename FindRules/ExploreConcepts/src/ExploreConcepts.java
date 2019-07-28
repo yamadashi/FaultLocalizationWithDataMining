@@ -1,14 +1,13 @@
 
-// TODO
-// extentのビット順入れ替えたい prepare computeclosure Concept
+// solutionの内包からルールの前件として不要なもの(共通な属性集合、ターゲット)を除く
+// contextから無駄を省くほうが探索時間も減るので効率的？
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Queue;
-import java.util.ArrayDeque;
+import java.util.PriorityQueue;
+import java.util.Comparator;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.File;
@@ -40,7 +39,7 @@ public class ExploreConcepts {
         this.targetIndex = targetIndex;
 
         solution = new ArrayList<>();
-        exploration = new ArrayDeque<Triplet>();
+        exploration = new PriorityQueue<Triplet>(new ExplorationComparator());
 
         readContext(file);
         prepare();
@@ -103,15 +102,6 @@ public class ExploreConcepts {
         Pair<Integer, Float> info = new Pair<>(sup, conf);
 
         return new Pair<>(flags, info);
-    }
-
-    // int[] の立っているbit数を数える
-    private int bitCount(int[] arr) {
-        int rtn = 0;
-        for (int e : arr) {
-            rtn += Integer.bitCount(e);
-        }
-        return rtn;
     }
 
     private void readContext(String file) {
@@ -226,7 +216,7 @@ public class ExploreConcepts {
         par.print();
         ATTR: for (int i = attrOffset; i < attrNum; i++) {
             // 属性をすでに内包として持っている場合
-            if ((par.getIntent()[i / INTSIZE] & (BIT << (i % INTSIZE))) != 0) {
+            if ((par.getIntent()[i / INTSIZE] & (BIT << (INTSIZE - (i % INTSIZE) - 1))) != 0) {
                 continue;
             }
             Concept child = computeClosure(par, objHas[i]);
@@ -263,11 +253,34 @@ public class ExploreConcepts {
         return concept;
     }
 
+    // int[] の立っているbit数を数える
+    static int bitCount(int[] arr) {
+        int rtn = 0;
+        for (int e : arr) {
+            rtn += Integer.bitCount(e);
+        }
+        return rtn;
+    }
+
     public void printBit(int bit) {
         System.out.println(toStringBit(bit));
     }
 
     public String toStringBit(int bit) {
         return String.format("%32s", Integer.toBinaryString(bit)).replaceAll(" ", "0");
+    }
+}
+
+class ExplorationComparator implements Comparator<Triplet> {
+    @Override
+    public int compare(Triplet triplet0, Triplet triplet1) {
+        int extSize0 = ExploreConcepts.bitCount(triplet0.getMap().getChild().getExtent());
+        int extSize1 = ExploreConcepts.bitCount(triplet1.getMap().getChild().getExtent());
+        if (extSize0 > extSize1) {
+            return 1;
+        } else if (extSize0 < extSize1) {
+            return -1;
+        } else
+            return -1;
     }
 }

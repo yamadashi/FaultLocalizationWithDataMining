@@ -36,7 +36,7 @@ public class TraceInfoProcessor {
 
         for (Integer lineNum : passLineNums) {
             try {
-                writer.write("," + lineNum);
+                writer.write("," + (lineNum + 1)); // 0,1番目の属性はfail,passなので1行目は2番目の属性になる
             } catch (IOException e) {
                 e.printStackTrace();
             }
