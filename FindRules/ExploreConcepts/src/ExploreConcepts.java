@@ -281,6 +281,6 @@ class ExplorationComparator implements Comparator<Triplet> {
         } else if (extSize0 < extSize1) {
             return -1;
         } else
-            return -1;
+            return 0;
     }
 }
