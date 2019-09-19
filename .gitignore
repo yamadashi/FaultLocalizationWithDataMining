@@ -14,7 +14,7 @@
 
 /CalcConcepts/bin/*
 
-/FindRules/ExploreConcepts/bin/*
+/FindRules/ExploreConcepts/ExploreConcepts/bin/*
 
 /misc/Krajca-pcbo/*
 !/misc/Krajca-pcbo/*.c

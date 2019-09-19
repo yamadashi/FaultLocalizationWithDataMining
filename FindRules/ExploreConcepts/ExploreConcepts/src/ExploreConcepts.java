@@ -17,16 +17,13 @@ public class ExploreConcepts {
     private List<Pair<Concept, Pair<Integer, Float>>> solution;
     private Queue<Triplet> exploration;
 
-    static public final int BIT_MAX = Integer.MAX_VALUE * 2 + 1;
-    static public final int INTSIZE = Integer.SIZE;
-    static public final int BIT = 1;
     private int[] context = null; // 文脈
     private int objNum = 0; // オブジェクト数
     private int attrNum = 0; // 属性数
     private int intObjLen = 0; // 属性をbitで管理したときに何個intが必要か
     private int intAttrLen = 0; // オブジェクトをbitで管理したときに何個intが必要か
-    private int[] upto = new int[INTSIZE];
-    private int[][] objHas = null; // ある属性をもつオブジェクトの集合
+    private int[] upto = new int[Constants.INTSIZE];
+    private int[][] objHas = null; // 第一要素を属性にもつオブジェクトの配列
 
     private int minsupp; // 最小support
     private float minconf; // 最小confidence
@@ -129,6 +126,8 @@ public class ExploreConcepts {
             System.out.println("error:" + e);
         }
 
+        int INTSIZE = Constants.INTSIZE;
+
         objNum = buff.size();
         attrNum = maxAttrIndex + 1; // indexは0からなので
         System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
@@ -139,16 +138,18 @@ public class ExploreConcepts {
         for (int i = 0; i < objNum; i++) {
             int[] obj = buff.get(i);
             for (int index : obj) {
-                context[i * intAttrLen + index / INTSIZE] |= BIT << (INTSIZE - (index % INTSIZE) - 1);
+                context[i * intAttrLen + index / INTSIZE] |= 1 << (INTSIZE - (index % INTSIZE) - 1);
             }
         }
     }
 
     private void prepare() {
 
+        int INTSIZE = Constants.INTSIZE;
+
         for (int i = 0; i < INTSIZE; i++) {
             for (int j = INTSIZE - 1; j > i; j--) {
-                upto[i] |= (BIT << j);
+                upto[i] |= (1 << j);
             }
         }
 
@@ -156,11 +157,11 @@ public class ExploreConcepts {
 
         for (int i = 0; i < intAttrLen; i++) {
             for (int j = 0; j < INTSIZE; j++) {
-                int mask = (BIT << j);
+                int mask = (1 << j);
                 for (int x = 0, y = i; x < objNum; x++, y += intAttrLen) {
                     if ((context[y] & mask) != 0) {
                         int attr = i * INTSIZE + (INTSIZE - j - 1);
-                        objHas[attr][x / INTSIZE] |= BIT << (INTSIZE - (x % INTSIZE) - 1);
+                        objHas[attr][x / INTSIZE] |= 1 << (INTSIZE - (x % INTSIZE) - 1);
                     }
                 }
             }
@@ -174,14 +175,15 @@ public class ExploreConcepts {
         int[] intent = rtn.getIntent();
 
         Arrays.fill(extent, 0);
-        Arrays.fill(intent, BIT_MAX);
+        Arrays.fill(intent, Constants.BIT_MAX);
 
+        int INTSIZE = Constants.INTSIZE;
         if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
             for (int i = 0; i < intObjLen - 1; ++i) {
-                extent[i] = BIT_MAX;
+                extent[i] = Constants.BIT_MAX;
             }
             for (int i = 0; i < objNum % INTSIZE; i++) {
-                extent[intObjLen - 1] |= (BIT << (INTSIZE - i - 1));
+                extent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
             }
 
             for (int j = 0; j < objNum; ++j) {
@@ -193,7 +195,7 @@ public class ExploreConcepts {
                 extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
                 if (extent[k] != 0) { // 共通のオブジェクトがあった場合
                     for (int l = 0; l < INTSIZE; ++l) {
-                        if ((extent[k] & (BIT << (INTSIZE - l - 1))) != 0) { // (k*INTSIZE+l)番目のオブジェクトが共通
+                        if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) { // (k*INTSIZE+l)番目のオブジェクトが共通
                             for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j) {
                                 intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
                             }
@@ -214,9 +216,11 @@ public class ExploreConcepts {
 
         System.out.print("par:");
         par.print();
+
+        int INTSIZE = Constants.INTSIZE;
         ATTR: for (int i = attrOffset; i < attrNum; i++) {
             // 属性をすでに内包として持っている場合
-            if ((par.getIntent()[i / INTSIZE] & (BIT << (INTSIZE - (i % INTSIZE) - 1))) != 0) {
+            if ((par.getIntent()[i / INTSIZE] & (1 << (INTSIZE - (i % INTSIZE) - 1))) != 0) {
                 continue;
             }
             Concept child = computeClosure(par, objHas[i]);
