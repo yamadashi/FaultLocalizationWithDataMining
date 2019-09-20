@@ -14,7 +14,7 @@ import java.io.File;
 
 public class ExploreConcepts {
 
-    private List<Pair<Concept, Pair<Integer, Float>>> solution;
+    private List<Concept> solution;
     private Queue<Triplet> exploration;
 
     private int[] context = null; // 文脈
@@ -42,7 +42,7 @@ public class ExploreConcepts {
         prepare();
     }
 
-    public List<Pair<Concept, Pair<Integer, Float>>> solve() {
+    public List<Concept> solve() {
 
         // 初期状態
         Concept top = computeClosure(null, null);
@@ -55,7 +55,7 @@ public class ExploreConcepts {
             Triplet triplet = exploration.poll();
             Concept s = triplet.getMap().getChild();
 
-            Pair<Pair<Boolean, Boolean>, Pair<Integer, Float>> filterRes = FILTER(s.getExtent());
+            Pair<Pair<Boolean, Boolean>, Concept.Statistics> filterRes = FILTER(s.getExtent());
 
             Pair<Boolean, Boolean> flags = filterRes.getFirst();
             boolean KEEP = flags.getFirst();
@@ -64,8 +64,8 @@ public class ExploreConcepts {
             if (KEEP || CONTINUE) {
 
                 if (KEEP) {
-                    Pair<Integer, Float> info = filterRes.getSecond();
-                    solution.add(new Pair<>(s, info));
+                    s.setStat(filterRes.getSecond());
+                    solution.add(s);
                 }
                 if (CONTINUE) {
                     int diffAttr = triplet.getMap().getDiff();
@@ -83,7 +83,7 @@ public class ExploreConcepts {
         return solution;
     }
 
-    private Pair<Pair<Boolean, Boolean>, Pair<Integer, Float>> FILTER(int[] extent) {
+    private Pair<Pair<Boolean, Boolean>, Concept.Statistics> FILTER(int[] extent) {
 
         int[] tmp = extent.clone();
         for (int i = 0; i < intObjLen; i++) {
@@ -96,9 +96,9 @@ public class ExploreConcepts {
         boolean CONTINUE = sup >= minsupp;
 
         Pair<Boolean, Boolean> flags = new Pair<>(KEEP, CONTINUE);
-        Pair<Integer, Float> info = new Pair<>(sup, conf);
+        Concept.Statistics stat = new Concept.Statistics(sup, conf, 0); //liftは仮
 
-        return new Pair<>(flags, info);
+        return new Pair<>(flags, stat);
     }
 
     private void readContext(String file) {

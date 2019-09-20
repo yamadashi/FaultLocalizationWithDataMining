@@ -4,12 +4,11 @@ public class Concept {
 
     private int[] extent; // 外延
     private int[] intent; // 内包
-    private Statistics stat;
+    private Statistics stat; //統計量 現状はすべての概念について必要ではないのでnull許容
 
     public Concept(int[] ex, int[] in) {
         this.extent = ex;
         this.intent = in;
-        
     }
 
     public int[] getExtent() {
@@ -22,6 +21,10 @@ public class Concept {
 
     public Statistics getStat() {
         return stat;
+    }
+
+    public void setStat(Statistics stat_) {
+        stat = stat_;
     }
 
     public void print() {
@@ -47,7 +50,7 @@ public class Concept {
         System.out.println(str);
     }
 
-    class Statistics {
+    static class Statistics {
         private int support;
         private float confidence;
         private float lift;
