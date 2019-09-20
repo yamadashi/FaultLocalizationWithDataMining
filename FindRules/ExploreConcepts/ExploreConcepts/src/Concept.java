@@ -4,7 +4,9 @@ public class Concept {
 
     private int[] extent; // 外延
     private int[] intent; // 内包
-    private Statistics stat; //統計量 現状はすべての概念について必要ではないのでnull許容
+    // 統計量 すべての概念について必要ではないのでnull許容
+    // 現状はFILTER関数実行時に求めているが、TripletComparatorで利用する場合はコンストラクタで初期化するように変更する
+    private Statistics stat = null;
 
     public Concept(int[] ex, int[] in) {
         this.extent = ex;

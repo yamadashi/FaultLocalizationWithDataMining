@@ -22,7 +22,7 @@ public class ExploreConcepts {
     private int attrNum = 0; // 属性数
     private int intObjLen = 0; // 属性をbitで管理したときに何個intが必要か
     private int intAttrLen = 0; // オブジェクトをbitで管理したときに何個intが必要か
-    private int[] upto = new int[Constants.INTSIZE];
+    private int[] upto = new int[Constants.INTSIZE]; // 下三角行列 詳しくはprepareを参照
     private int[][] objHas = null; // 第一要素を属性にもつオブジェクトの配列
 
     private int minsupp; // 最小support
@@ -36,7 +36,7 @@ public class ExploreConcepts {
         this.targetIndex = targetIndex;
 
         solution = new ArrayList<>();
-        exploration = new PriorityQueue<Triplet>(new ExplorationComparator());
+        exploration = new PriorityQueue<Triplet>(new TripletComparator());
 
         readContext(file);
         prepare();
@@ -46,7 +46,6 @@ public class ExploreConcepts {
 
         // 初期状態
         Concept top = computeClosure(null, null);
-
         for (Triplet tri : getChildren(top, 0)) {
             exploration.add(tri);
         }
@@ -55,8 +54,8 @@ public class ExploreConcepts {
             Triplet triplet = exploration.poll();
             Concept s = triplet.getMap().getChild();
 
+            // FILTERの結果の取得
             Pair<Pair<Boolean, Boolean>, Concept.Statistics> filterRes = FILTER(s.getExtent());
-
             Pair<Boolean, Boolean> flags = filterRes.getFirst();
             boolean KEEP = flags.getFirst();
             boolean CONTINUE = flags.getSecond();
@@ -69,6 +68,7 @@ public class ExploreConcepts {
                 }
                 if (CONTINUE) {
                     int diffAttr = triplet.getMap().getDiff();
+                    // 次の属性を差分として子概念を取得
                     List<Triplet> children = getChildren(s, diffAttr + 1);
                     if (children == null)
                         continue;
@@ -83,20 +83,23 @@ public class ExploreConcepts {
         return solution;
     }
 
-    private Pair<Pair<Boolean, Boolean>, Concept.Statistics> FILTER(int[] extent) {
+    private Pair<Pair<Boolean, Boolean>, Concept.Statistics> FILTER(int[] ext_s) {
 
-        int[] tmp = extent.clone();
+        // targetIndexを持つobjectsとextentの共通集合( ext_T ∩ ext_s )
+        int[] tmp = ext_s.clone();
         for (int i = 0; i < intObjLen; i++) {
             tmp[i] &= objHas[targetIndex][i];
         }
+
         int sup = bitCount(tmp); // || ext_s ∩ ext_T ||
-        float conf = (float) sup / bitCount(extent);
+        float conf = (float) sup / bitCount(ext_s);
+        float lift = conf / bitCount(objHas[targetIndex]);
 
         boolean KEEP = sup >= minsupp && conf >= minconf;
         boolean CONTINUE = sup >= minsupp;
 
         Pair<Boolean, Boolean> flags = new Pair<>(KEEP, CONTINUE);
-        Concept.Statistics stat = new Concept.Statistics(sup, conf, 0); //liftは仮
+        Concept.Statistics stat = new Concept.Statistics(sup, conf, lift);
 
         return new Pair<>(flags, stat);
     }
@@ -148,10 +151,18 @@ public class ExploreConcepts {
         int INTSIZE = Constants.INTSIZE;
 
         for (int i = 0; i < INTSIZE; i++) {
-            for (int j = INTSIZE - 1; j > i; j--) {
-                upto[i] |= (1 << j);
+            for (int j = 0; j < i; j++) {
+                upto[i] |= (1 << (INTSIZE - 1 - j));
             }
         }
+        // uptoは以下のような行列になる
+        // 0 0 0 .. 0 0
+        // 1 0 0 .. 0 0
+        // 1 1 0 .. 0 0
+        // 1 1 1 .. 0 0
+        // :          :
+        // 1 1 1 .. 1 0
+
 
         objHas = new int[intAttrLen * INTSIZE][intObjLen];
 
@@ -179,6 +190,7 @@ public class ExploreConcepts {
 
         int INTSIZE = Constants.INTSIZE;
         if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
+            //全オブジェクトに対応するbitを立たせる
             for (int i = 0; i < intObjLen - 1; ++i) {
                 extent[i] = Constants.BIT_MAX;
             }
@@ -234,7 +246,7 @@ public class ExploreConcepts {
                 }
             }
             if (((child.getIntent()[i / INTSIZE] ^ par.getIntent()[i / INTSIZE])
-                    & upto[INTSIZE - (i % INTSIZE) - 1]) != 0) {
+                    & upto[i % INTSIZE]) != 0) {
                 continue;
             }
 
@@ -275,7 +287,7 @@ public class ExploreConcepts {
     }
 }
 
-class ExplorationComparator implements Comparator<Triplet> {
+class TripletComparator implements Comparator<Triplet> {
     @Override
     public int compare(Triplet triplet0, Triplet triplet1) {
         int extSize0 = ExploreConcepts.bitCount(triplet0.getMap().getChild().getExtent());
