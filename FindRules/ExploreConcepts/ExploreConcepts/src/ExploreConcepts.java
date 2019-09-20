@@ -22,7 +22,7 @@ public class ExploreConcepts {
     private int attrNum = 0; // 属性数
     private int intObjLen = 0; // 属性をbitで管理したときに何個intが必要か
     private int intAttrLen = 0; // オブジェクトをbitで管理したときに何個intが必要か
-    private int[] upto = new int[Constants.INTSIZE]; // 下三角行列 詳しくはprepareを参照
+    private int[] upto = new int[Constants.INTSIZE]; // 下三角行列状 詳しくはprepareを参照
     private int[][] objHas = null; // 第一要素を属性にもつオブジェクトの配列
 
     private int minsupp; // 最小support
@@ -68,7 +68,6 @@ public class ExploreConcepts {
                 }
                 if (CONTINUE) {
                     int diffAttr = triplet.getMap().getDiff();
-                    // 次の属性を差分として子概念を取得
                     List<Triplet> children = getChildren(s, diffAttr + 1);
                     if (children == null)
                         continue;
