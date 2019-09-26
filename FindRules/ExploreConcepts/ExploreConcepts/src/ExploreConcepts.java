@@ -50,9 +50,14 @@ public class ExploreConcepts {
             exploration.add(tri);
         }
 
+        int i = 0;
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
             Concept s = triplet.getMap().getChild();
+
+            if (i++ == 1) {
+                System.out.println(triplet);
+            }
 
             // FILTERの結果の取得
             Pair<Pair<Boolean, Boolean>, Concept.Statistics> filterRes = FILTER(s.getExtent());
@@ -225,8 +230,7 @@ public class ExploreConcepts {
         if (attrOffset >= attrNum)
             return null;
 
-        System.out.print("par:");
-        par.print();
+        System.out.println("par:"+par);
 
         int INTSIZE = Constants.INTSIZE;
         ATTR: for (int i = attrOffset; i < attrNum; i++) {
@@ -249,8 +253,7 @@ public class ExploreConcepts {
                 continue;
             }
 
-            System.out.print("  diff:" + i + " child:");
-            child.print();
+            System.out.println("  diff:" + i + " child:"+ child);
             increments.add(new Mapping(child, i));
         }
 
@@ -277,11 +280,7 @@ public class ExploreConcepts {
         return rtn;
     }
 
-    public void printBit(int bit) {
-        System.out.println(toStringBit(bit));
-    }
-
-    public String toStringBit(int bit) {
+    public static String toStringBit(int bit) {
         return String.format("%32s", Integer.toBinaryString(bit)).replaceAll(" ", "0");
     }
 }

@@ -22,4 +22,14 @@ public class Triplet {
     public List<Mapping> getIncr() {
         return increments;
     }
+
+    @Override
+    public String toString() {
+        String str = "( "+ map +", "+Concept.toString(intent)+", { ";
+        for (Mapping m : increments) {
+            str += m + " ";
+        }
+        str += "} )";
+        return str;
+    }
 }

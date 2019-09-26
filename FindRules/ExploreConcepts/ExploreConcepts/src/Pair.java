@@ -23,4 +23,9 @@ class Pair<First, Second> {
         this.s = s;
     }
 
+    @Override
+    public String toString() {
+        return "("+f+", "+s+")";
+    }
+
 }

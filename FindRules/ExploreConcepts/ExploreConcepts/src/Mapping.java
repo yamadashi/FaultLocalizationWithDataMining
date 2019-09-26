@@ -14,4 +14,9 @@ public class Mapping {
     public int getDiff() {
         return diff;
     }
+
+    @Override
+    public String toString() {
+        return "("+child+")→"+diff;
+    }
 }

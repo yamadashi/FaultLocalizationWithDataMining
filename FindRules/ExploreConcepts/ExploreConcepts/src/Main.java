@@ -11,9 +11,7 @@ public class Main {
         List<Concept> solution = new ExploreConcepts(filename, minsup, minconf, 0).solve();
         System.out.println("=============================");
         for (Concept elm : solution) {
-            Concept.Statistics stat = elm.getStat();
-            System.out.print("sup:" + stat.getSupp() + " conf:" + stat.getConf() + " ");
-            elm.print();
+            System.out.println("(" + elm.getStat() + ") " + elm);
         }
     }
 }

@@ -29,27 +29,25 @@ public class Concept {
         stat = stat_;
     }
 
-    public void print() {
+    public static String toString(int[] elm) {
+
         int INTSIZE = Constants.INTSIZE;
 
         String str = "{ ";
-        for (int i = 0; i < extent.length; i++) {
+        for (int i = 0; i < elm.length; i++) {
             for (int j = INTSIZE - 1; j >= 0; j--) {
-                if ((extent[i] & 1 << j) != 0) {
-                    str += ((INTSIZE - j - 1 + i * (INTSIZE)) + " ");
-                }
-            }
-        }
-        str += "} / { ";
-        for (int i = 0; i < intent.length; i++) {
-            for (int j = INTSIZE - 1; j >= 0; j--) {
-                if ((intent[i] & 1 << j) != 0) {
+                if ((elm[i] & 1 << j) != 0) {
                     str += ((INTSIZE - j - 1 + i * (INTSIZE)) + " ");
                 }
             }
         }
         str += "}";
-        System.out.println(str);
+        return str;
+    }
+
+    @Override
+    public String toString() {
+        return toString(extent) + "/" + toString(intent);
     }
 
     static class Statistics {
@@ -62,14 +60,22 @@ public class Concept {
             confidence = conf;
             lift = lif;
         }
+
         public int getSupp() {
             return support;
         }
+
         public float getConf() {
             return confidence;
         }
+
         public float getLift() {
             return lift;
+        }
+
+        @Override
+        public String toString() {
+            return "sup:" + support + " conf:" + confidence + " lift:" + lift;
         }
     }
 }
