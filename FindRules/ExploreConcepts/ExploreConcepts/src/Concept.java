@@ -2,15 +2,20 @@
 // 概念
 public class Concept {
 
+    private Concept parent;
     private int[] extent; // 外延
     private int[] intent; // 内包
-    // 統計量 すべての概念について必要ではないのでnull許容
-    // 現状はFILTER関数実行時に求めているが、TripletComparatorで利用する場合はコンストラクタで初期化するように変更する
-    private Statistics stat = null;
+    private Statistics stat; // 統計量
 
-    public Concept(int[] ex, int[] in) {
+    public Concept(int[] ex, int[] in, Concept parent, Statistics stat) {
         this.extent = ex;
         this.intent = in;
+        this.parent = parent;
+        this.stat = stat;
+    }
+
+    public Concept getParent() {
+        return parent;
     }
 
     public int[] getExtent() {
@@ -48,34 +53,5 @@ public class Concept {
     @Override
     public String toString() {
         return toString(extent) + "/" + toString(intent);
-    }
-
-    static class Statistics {
-        private int support;
-        private float confidence;
-        private float lift;
-
-        public Statistics(int supp, float conf, float lif) {
-            support = supp;
-            confidence = conf;
-            lift = lif;
-        }
-
-        public int getSupp() {
-            return support;
-        }
-
-        public float getConf() {
-            return confidence;
-        }
-
-        public float getLift() {
-            return lift;
-        }
-
-        @Override
-        public String toString() {
-            return "sup:" + support + " conf:" + confidence + " lift:" + lift;
-        }
     }
 }

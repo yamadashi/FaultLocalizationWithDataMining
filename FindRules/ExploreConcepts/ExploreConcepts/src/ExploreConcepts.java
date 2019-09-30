@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Queue;
 import java.util.PriorityQueue;
-import java.util.Comparator;
+import java.util.Set;
+import java.util.HashSet;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.File;
@@ -36,13 +37,23 @@ public class ExploreConcepts {
         this.targetIndex = targetIndex;
 
         solution = new ArrayList<>();
-        exploration = new PriorityQueue<Triplet>(new TripletComparator());
+        exploration = new PriorityQueue<Triplet>();
 
         readContext(file);
         prepare();
     }
 
-    public List<Concept> solve() {
+    public Set<Rule> run() {
+        List<Concept> sol = solve();
+        System.out.println("=============================");
+        for (Concept c : sol) {
+            System.out.println(c.getStat()+"\n\t"+c);
+        }
+        System.out.println("=============================");
+        return makeRules(sol);
+    }
+
+    private List<Concept> solve() {
 
         // 初期状態
         Concept top = computeClosure(null, null);
@@ -50,25 +61,18 @@ public class ExploreConcepts {
             exploration.add(tri);
         }
 
-        int i = 0;
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
             Concept s = triplet.getMap().getChild();
 
-            if (i++ == 1) {
-                System.out.println(triplet);
-            }
-
             // FILTERの結果の取得
-            Pair<Pair<Boolean, Boolean>, Concept.Statistics> filterRes = FILTER(s.getExtent());
-            Pair<Boolean, Boolean> flags = filterRes.getFirst();
+            Pair<Boolean, Boolean> flags = FILTER(s);
             boolean KEEP = flags.getFirst();
             boolean CONTINUE = flags.getSecond();
 
             if (KEEP || CONTINUE) {
 
                 if (KEEP) {
-                    s.setStat(filterRes.getSecond());
                     solution.add(s);
                 }
                 if (CONTINUE) {
@@ -87,25 +91,49 @@ public class ExploreConcepts {
         return solution;
     }
 
-    private Pair<Pair<Boolean, Boolean>, Concept.Statistics> FILTER(int[] ext_s) {
-
-        // targetIndexを持つobjectsとextentの共通集合( ext_T ∩ ext_s )
-        int[] tmp = ext_s.clone();
-        for (int i = 0; i < intObjLen; i++) {
-            tmp[i] &= objHas[targetIndex][i];
+    private Set<Rule> makeRules(List<Concept> sol) {
+        Set<Rule> rules = new HashSet<Rule>();
+        for (Concept c : sol) {
+            // もし解のコンセプトの内包がターゲットの属性を持っていたら
+            if (flagIsSet(c.getIntent(), targetIndex)) {
+                List<Concept> path = getPathFromTop(c);
+                int[] removed = unsetFlag(c.getIntent(), targetIndex);
+                for (Concept predecessor : path) {
+                    System.out.println(predecessor);
+                    if (!contain(predecessor.getIntent(), removed)) continue;
+                    System.out.println(Concept.toString(removed));
+                    Rule r = new Rule(removed, targetIndex, predecessor.getStat());
+                    System.out.println(r);
+                    System.out.println(r.hashCode());
+                    boolean f = rules.add(r);
+                    System.out.println(f);
+                    break;
+                }
+            }
+            else {
+                System.out.println(c);
+                Rule r = new Rule(c.getIntent(), targetIndex, c.getStat());
+                System.out.println(r);
+                System.out.println(r.hashCode());
+                boolean f = rules.add(r);
+                System.out.println(f);
+            }
+            System.out.println("------");
         }
+        return rules;
+    }
 
-        int sup = bitCount(tmp); // || ext_s ∩ ext_T ||
-        float conf = (float) sup / bitCount(ext_s);
-        float lift = conf / bitCount(objHas[targetIndex]);
+    private Pair<Boolean, Boolean> FILTER(Concept s) {
 
-        boolean KEEP = sup >= minsupp && conf >= minconf;
-        boolean CONTINUE = sup >= minsupp;
+        Statistics stat = makeStat(s.getExtent());
+
+        boolean KEEP = stat.getSupp() >= minsupp && stat.getConf() >= minconf;
+        boolean CONTINUE = stat.getSupp() >= minsupp;
 
         Pair<Boolean, Boolean> flags = new Pair<>(KEEP, CONTINUE);
-        Concept.Statistics stat = new Concept.Statistics(sup, conf, lift);
+        s.setStat(stat);
 
-        return new Pair<>(flags, stat);
+        return flags;
     }
 
     private void readContext(String file) {
@@ -185,9 +213,9 @@ public class ExploreConcepts {
 
     private Concept computeClosure(Concept prev, int[] attrExtent) {
 
-        Concept rtn = createVoidConcept();
-        int[] extent = rtn.getExtent();
-        int[] intent = rtn.getIntent();
+        int[] extent = new int[intObjLen];
+        int[] intent = new int[intAttrLen];
+        Statistics stat = null;
 
         Arrays.fill(extent, 0);
         Arrays.fill(intent, Constants.BIT_MAX);
@@ -206,6 +234,7 @@ public class ExploreConcepts {
                 for (int i = 0; i < intAttrLen; ++i)
                     intent[i] &= context[intAttrLen * j + i];
             }
+            stat = makeStat(extent);
         } else {
             for (int k = 0; k < intObjLen; ++k) {
                 extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
@@ -221,7 +250,7 @@ public class ExploreConcepts {
                     return null;
             }
         }
-        return rtn;
+        return new Concept(extent, intent, prev, stat);
     }
 
     private List<Triplet> getChildren(Concept par, int attrOffset) {
@@ -258,7 +287,7 @@ public class ExploreConcepts {
         }
 
         for (Mapping mapping : increments) {
-            children.add(new Triplet(mapping, par.getIntent(), increments));
+            children.add(new Triplet(mapping, par, increments));
         }
 
         if (children.size() == 0)
@@ -266,9 +295,55 @@ public class ExploreConcepts {
         return children;
     }
 
-    private Concept createVoidConcept() {
-        Concept concept = new Concept(new int[intObjLen], new int[intAttrLen]);
-        return concept;
+    private boolean contain(int[] sup, int[] sub) {
+        boolean rtn = true;
+        for (int i = 0; i < sup.length; i++) {
+            if (sup[i] != (sup[i] | sub[i])) rtn = false;
+        }
+        return rtn;
+    }
+
+    private boolean flagIsSet(int[] data, int index) {
+        int INTSIZE = Constants.INTSIZE;
+        return (data[index / INTSIZE] & setFlag(0, index % INTSIZE)) != 0;
+    }
+
+    private int[] unsetFlag(int[] origin, int index) {
+        int[] rtn = origin.clone();
+        int arrIndex = index / Constants.INTSIZE; 
+        rtn[arrIndex] &= ~setFlag(0, index % Constants.INTSIZE);
+        return rtn;
+    }
+
+    // このメソッドを使ってリファクタリングの余地あり
+    // 指定位置のビットを立てたデータを返す
+    private int setFlag(int origin, int index) {
+        return origin | (1 << (index % Constants.INTSIZE - 1));
+    }
+
+    // 下からたどったほうがいいかもしれない
+    // 該当コンセプトまでの道のりを返す
+    private List<Concept> getPathFromTop(Concept c) {
+        List<Concept> path = new ArrayList<Concept>();
+        while(c != null) {
+            path.add(0, c); // 先頭に追加
+            c = c.getParent();
+        }
+        return path;
+    }
+    private Statistics makeStat(int[] ext) {
+
+        // targetIndexを持つobjectsとextentの共通集合( ext_T ∩ ext_s )
+        int[] tmp = ext.clone();
+        for (int i = 0; i < intObjLen; i++) {
+            tmp[i] &= objHas[targetIndex][i];
+        }
+
+        int sup = bitCount(tmp); // || ext_s ∩ ext_T ||
+        float conf = (float) sup / bitCount(ext);
+        float lift = conf / ((float) bitCount(objHas[targetIndex]) / objNum);
+
+        return new Statistics(sup, conf, lift);
     }
 
     // int[] の立っているbit数を数える
@@ -282,19 +357,5 @@ public class ExploreConcepts {
 
     public static String toStringBit(int bit) {
         return String.format("%32s", Integer.toBinaryString(bit)).replaceAll(" ", "0");
-    }
-}
-
-class TripletComparator implements Comparator<Triplet> {
-    @Override
-    public int compare(Triplet triplet0, Triplet triplet1) {
-        int extSize0 = ExploreConcepts.bitCount(triplet0.getMap().getChild().getExtent());
-        int extSize1 = ExploreConcepts.bitCount(triplet1.getMap().getChild().getExtent());
-        if (extSize0 > extSize1) {
-            return 1;
-        } else if (extSize0 < extSize1) {
-            return -1;
-        } else
-            return 0;
     }
 }

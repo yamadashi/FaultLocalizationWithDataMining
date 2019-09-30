@@ -1,4 +1,8 @@
+import java.util.Set;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class Main {
     public static void main(String[] args) {
@@ -8,10 +12,18 @@ public class Main {
 
         System.out.println("\nfile:" + filename + "\nminsup:" + minsup + "\nminconf:" + minconf);
 
-        List<Concept> solution = new ExploreConcepts(filename, minsup, minconf, 0).solve();
+        Set<Rule> unorderedRules = new ExploreConcepts(filename, minsup, minconf, 0).run();
+        List<Rule> rules = new ArrayList<Rule>(unorderedRules);
+        Collections.sort(rules, new Comparator<Rule>() {
+            @Override
+            public int compare(Rule r0, Rule r1) {
+                return -Float.compare(r0.getStat().getLift(), r1.getStat().getLift());
+            }
+        });
+
         System.out.println("=============================");
-        for (Concept elm : solution) {
-            System.out.println("(" + elm.getStat() + ") " + elm);
+        for (Rule elm : rules) {
+            System.out.println(elm);
         }
     }
 }
