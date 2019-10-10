@@ -17,6 +17,7 @@ public class ExploreConcepts {
 
     private List<Concept> solution;
     private Queue<Triplet> exploration;
+    private Queue<Triplet> nextExploration; // explorationを段階的にする 束の段ごとに分けることで親コンセプトの発見を容易にする
 
     private int[] context = null; // 文脈
     private int objNum = 0; // オブジェクト数
@@ -38,6 +39,7 @@ public class ExploreConcepts {
 
         solution = new ArrayList<>();
         exploration = new PriorityQueue<Triplet>();
+        nextExploration = new PriorityQueue<Triplet>();
 
         readContext(file);
         prepare();
@@ -47,7 +49,7 @@ public class ExploreConcepts {
         List<Concept> sol = solve();
         System.out.println("=============================");
         for (Concept c : sol) {
-            System.out.println(c.getStat()+"\n\t"+c);
+            System.out.println(c.getStat() + "\n\t" + c);
         }
         System.out.println("=============================");
         return makeRules(sol);
@@ -61,8 +63,17 @@ public class ExploreConcepts {
             exploration.add(tri);
         }
 
+        List<Concept> layer = new ArrayList<Concept>();
+        Runnable setLayer = () -> {
+            for (Triplet tri : exploration) {
+                layer.add(tri.getMap().getChild());
+            }
+        };
+        setLayer.run();
+
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
+
             Concept s = triplet.getMap().getChild();
 
             // FILTERの結果の取得
@@ -71,7 +82,7 @@ public class ExploreConcepts {
             boolean CONTINUE = flags.getSecond();
 
             if (KEEP || CONTINUE) {
-
+                s.setParentCandidates(layer);
                 if (KEEP) {
                     solution.add(s);
                 }
@@ -82,9 +93,15 @@ public class ExploreConcepts {
                         continue;
 
                     for (Triplet tri : children) {
-                        exploration.add(tri);
+                        nextExploration.add(tri);
                     }
                 }
+            }
+
+            if (exploration.isEmpty()) {
+                exploration = nextExploration;
+                setLayer.run();
+                nextExploration = exploration; // 新しいインスタンスの生成コストを考えて再利用しているが可読性を優先すべきかも
             }
         }
 
@@ -94,23 +111,30 @@ public class ExploreConcepts {
     private Set<Rule> makeRules(List<Concept> sol) {
         Set<Rule> rules = new HashSet<Rule>();
         for (Concept c : sol) {
-            // もし解のコンセプトの内包がターゲットの属性を持っていたら
+            // 解のコンセプトの内包がターゲットの属性を持っている場合
             if (flagIsSet(c.getIntent(), targetIndex)) {
-                List<Concept> path = getPathFromTop(c);
                 int[] removed = unsetFlag(c.getIntent(), targetIndex);
-                for (Concept predecessor : path) {
-                    System.out.println(predecessor);
-                    if (!contain(predecessor.getIntent(), removed)) continue;
-                    System.out.println(Concept.toString(removed));
-                    Rule r = new Rule(removed, targetIndex, predecessor.getStat());
+                boolean added = false;
+                //
+                for (Concept candidate : c.getParentCandidates()) {
+                    if (equal(candidate.getIntent(), removed)) {
+                        Rule r = new Rule(removed, targetIndex, candidate.getStat());
+                        System.out.println(r);
+                        System.out.println(r.hashCode());
+                        boolean f = rules.add(r);
+                        System.out.println(f);
+                        added = true;
+                        break;
+                    }
+                }
+                if (!added) {
+                    Rule r = new Rule(removed, targetIndex, c.getStat());
                     System.out.println(r);
                     System.out.println(r.hashCode());
                     boolean f = rules.add(r);
                     System.out.println(f);
-                    break;
                 }
-            }
-            else {
+            } else {
                 System.out.println(c);
                 Rule r = new Rule(c.getIntent(), targetIndex, c.getStat());
                 System.out.println(r);
@@ -192,9 +216,8 @@ public class ExploreConcepts {
         // 1 0 0 .. 0 0
         // 1 1 0 .. 0 0
         // 1 1 1 .. 0 0
-        // :          :
+        // : :
         // 1 1 1 .. 1 0
-
 
         objHas = new int[intAttrLen * INTSIZE][intObjLen];
 
@@ -222,7 +245,7 @@ public class ExploreConcepts {
 
         int INTSIZE = Constants.INTSIZE;
         if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
-            //全オブジェクトに対応するbitを立たせる
+            // 全オブジェクトに対応するbitを立たせる
             for (int i = 0; i < intObjLen - 1; ++i) {
                 extent[i] = Constants.BIT_MAX;
             }
@@ -250,7 +273,7 @@ public class ExploreConcepts {
                     return null;
             }
         }
-        return new Concept(extent, intent, prev, stat);
+        return new Concept(extent, intent, stat);
     }
 
     private List<Triplet> getChildren(Concept par, int attrOffset) {
@@ -259,7 +282,7 @@ public class ExploreConcepts {
         if (attrOffset >= attrNum)
             return null;
 
-        System.out.println("par:"+par);
+        System.out.println("par:" + par);
 
         int INTSIZE = Constants.INTSIZE;
         ATTR: for (int i = attrOffset; i < attrNum; i++) {
@@ -277,12 +300,11 @@ public class ExploreConcepts {
                     continue ATTR;
                 }
             }
-            if (((child.getIntent()[i / INTSIZE] ^ par.getIntent()[i / INTSIZE])
-                    & upto[i % INTSIZE]) != 0) {
+            if (((child.getIntent()[i / INTSIZE] ^ par.getIntent()[i / INTSIZE]) & upto[i % INTSIZE]) != 0) {
                 continue;
             }
 
-            System.out.println("  diff:" + i + " child:"+ child);
+            System.out.println("  diff:" + i + " child:" + child);
             increments.add(new Mapping(child, i));
         }
 
@@ -295,42 +317,27 @@ public class ExploreConcepts {
         return children;
     }
 
-    private boolean contain(int[] sup, int[] sub) {
+    private boolean equal(int[] arr0, int[] arr1) {
         boolean rtn = true;
-        for (int i = 0; i < sup.length; i++) {
-            if (sup[i] != (sup[i] | sub[i])) rtn = false;
+        for (int i = 0; i < arr0.length; i++) {
+            if (arr0[i] != arr1[i])
+                rtn = false;
         }
         return rtn;
     }
 
     private boolean flagIsSet(int[] data, int index) {
         int INTSIZE = Constants.INTSIZE;
-        return (data[index / INTSIZE] & setFlag(0, index % INTSIZE)) != 0;
+        return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
     }
 
     private int[] unsetFlag(int[] origin, int index) {
         int[] rtn = origin.clone();
-        int arrIndex = index / Constants.INTSIZE; 
-        rtn[arrIndex] &= ~setFlag(0, index % Constants.INTSIZE);
+        int arrIndex = index / Constants.INTSIZE;
+        rtn[arrIndex] &= ~(1 << (index % Constants.INTSIZE - 1));
         return rtn;
     }
 
-    // このメソッドを使ってリファクタリングの余地あり
-    // 指定位置のビットを立てたデータを返す
-    private int setFlag(int origin, int index) {
-        return origin | (1 << (index % Constants.INTSIZE - 1));
-    }
-
-    // 下からたどったほうがいいかもしれない
-    // 該当コンセプトまでの道のりを返す
-    private List<Concept> getPathFromTop(Concept c) {
-        List<Concept> path = new ArrayList<Concept>();
-        while(c != null) {
-            path.add(0, c); // 先頭に追加
-            c = c.getParent();
-        }
-        return path;
-    }
     private Statistics makeStat(int[] ext) {
 
         // targetIndexを持つobjectsとextentの共通集合( ext_T ∩ ext_s )

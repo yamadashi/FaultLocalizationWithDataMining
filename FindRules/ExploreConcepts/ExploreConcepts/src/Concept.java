@@ -1,21 +1,25 @@
+import java.util.List;
 
 // 概念
 public class Concept {
 
-    private Concept parent;
+    private List<Concept> parentCandidates;
     private int[] extent; // 外延
     private int[] intent; // 内包
     private Statistics stat; // 統計量
 
-    public Concept(int[] ex, int[] in, Concept parent, Statistics stat) {
+    public Concept(int[] ex, int[] in, Statistics stat) {
         this.extent = ex;
         this.intent = in;
-        this.parent = parent;
         this.stat = stat;
     }
 
-    public Concept getParent() {
-        return parent;
+    public List<Concept> getParentCandidates() {
+        return parentCandidates;
+    }
+
+    public void setParentCandidates(List<Concept> parentCandidates) {
+        this.parentCandidates = parentCandidates;
     }
 
     public int[] getExtent() {
@@ -30,8 +34,8 @@ public class Concept {
         return stat;
     }
 
-    public void setStat(Statistics stat_) {
-        stat = stat_;
+    public void setStat(Statistics stat) {
+        this.stat = stat;
     }
 
     public static String toString(int[] elm) {
