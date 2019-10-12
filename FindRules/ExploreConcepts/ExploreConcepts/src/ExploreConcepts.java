@@ -1,7 +1,3 @@
-
-// solutionの内包からルールの前件として不要なもの(共通な属性集合、ターゲット)を除く
-// contextから無駄を省くほうが探索時間も減るので効率的？
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
@@ -12,12 +8,13 @@ import java.util.HashSet;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.File;
+import java.util.function.*;
 
 public class ExploreConcepts {
 
     private List<Concept> solution;
     private Queue<Triplet> exploration;
-    private Queue<Triplet> nextExploration; // explorationを段階的にする 束の段ごとに分けることで親コンセプトの発見を容易にする
+    private Queue<Triplet> nextExploration; // explorationを段階的にする
 
     private int[] context = null; // 文脈
     private int objNum = 0; // オブジェクト数
@@ -62,9 +59,10 @@ public class ExploreConcepts {
         for (Triplet tri : getChildren(top, 0)) {
             exploration.add(tri);
         }
-
+        // 同じ段のコンセプトを保持しておくリスト
         List<Concept> layer = new ArrayList<Concept>();
         Runnable setLayer = () -> {
+            layer.clear();
             for (Triplet tri : exploration) {
                 layer.add(tri.getMap().getChild());
             }
@@ -73,7 +71,6 @@ public class ExploreConcepts {
 
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
-
             Concept s = triplet.getMap().getChild();
 
             // FILTERの結果の取得
@@ -83,6 +80,7 @@ public class ExploreConcepts {
 
             if (KEEP || CONTINUE) {
                 s.setParentCandidates(layer);
+
                 if (KEEP) {
                     solution.add(s);
                 }
@@ -101,7 +99,7 @@ public class ExploreConcepts {
             if (exploration.isEmpty()) {
                 exploration = nextExploration;
                 setLayer.run();
-                nextExploration = exploration; // 新しいインスタンスの生成コストを考えて再利用しているが可読性を優先すべきかも
+                nextExploration = new PriorityQueue<>();
             }
         }
 
@@ -110,39 +108,49 @@ public class ExploreConcepts {
 
     private Set<Rule> makeRules(List<Concept> sol) {
         Set<Rule> rules = new HashSet<Rule>();
+
+        // 局所的なヘルパー関数群
+        BiPredicate<int[], Integer> flagIsSet = (data, index) -> {
+            int INTSIZE = Constants.INTSIZE;
+            return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
+        };
+        BiPredicate<int[], int[]> arrEqual = (arr0, arr1) -> {
+            boolean rtn = true;
+            for (int i = 0; i < arr0.length; i++) {
+                if (arr0[i] != arr1[i])
+                    rtn = false;
+            }
+            return rtn;
+        };
+        BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
+            int[] rtn = origin.clone();
+            int INTSIZE = Constants.INTSIZE;
+            rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE - 1));
+            return rtn;
+        };
+
         for (Concept c : sol) {
-            // 解のコンセプトの内包がターゲットの属性を持っている場合
-            if (flagIsSet(c.getIntent(), targetIndex)) {
-                int[] removed = unsetFlag(c.getIntent(), targetIndex);
+            // 解の概念の内包がターゲットの属性を持っている場合
+            if (flagIsSet.test(c.getIntent(), targetIndex)) {
+                int[] removed = flagUnset.apply(c.getIntent(), targetIndex);
+                // 属性がターゲットのみの場合ルールとして成立しない
+                if (bitCount(removed) == 0)
+                    continue;
                 boolean added = false;
-                //
+                // 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用
                 for (Concept candidate : c.getParentCandidates()) {
-                    if (equal(candidate.getIntent(), removed)) {
-                        Rule r = new Rule(removed, targetIndex, candidate.getStat());
-                        System.out.println(r);
-                        System.out.println(r.hashCode());
-                        boolean f = rules.add(r);
-                        System.out.println(f);
+                    if (arrEqual.test(candidate.getIntent(), removed)) {
+                        rules.add(new Rule(removed, targetIndex, candidate.getStat()));
                         added = true;
                         break;
                     }
                 }
                 if (!added) {
-                    Rule r = new Rule(removed, targetIndex, c.getStat());
-                    System.out.println(r);
-                    System.out.println(r.hashCode());
-                    boolean f = rules.add(r);
-                    System.out.println(f);
+                    rules.add(new Rule(removed, targetIndex, c.getStat()));
                 }
             } else {
-                System.out.println(c);
-                Rule r = new Rule(c.getIntent(), targetIndex, c.getStat());
-                System.out.println(r);
-                System.out.println(r.hashCode());
-                boolean f = rules.add(r);
-                System.out.println(f);
+                rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
             }
-            System.out.println("------");
         }
         return rules;
     }
@@ -257,6 +265,7 @@ public class ExploreConcepts {
                 for (int i = 0; i < intAttrLen; ++i)
                     intent[i] &= context[intAttrLen * j + i];
             }
+            // top概念のみこの時点でStatisticsを計算（他コンセプトは必要なときに計算）
             stat = makeStat(extent);
         } else {
             for (int k = 0; k < intObjLen; ++k) {
@@ -315,27 +324,6 @@ public class ExploreConcepts {
         if (children.size() == 0)
             return null;
         return children;
-    }
-
-    private boolean equal(int[] arr0, int[] arr1) {
-        boolean rtn = true;
-        for (int i = 0; i < arr0.length; i++) {
-            if (arr0[i] != arr1[i])
-                rtn = false;
-        }
-        return rtn;
-    }
-
-    private boolean flagIsSet(int[] data, int index) {
-        int INTSIZE = Constants.INTSIZE;
-        return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
-    }
-
-    private int[] unsetFlag(int[] origin, int index) {
-        int[] rtn = origin.clone();
-        int arrIndex = index / Constants.INTSIZE;
-        rtn[arrIndex] &= ~(1 << (index % Constants.INTSIZE - 1));
-        return rtn;
     }
 
     private Statistics makeStat(int[] ext) {

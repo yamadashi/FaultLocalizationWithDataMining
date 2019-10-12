@@ -14,6 +14,7 @@ public class Main {
 
         Set<Rule> unorderedRules = new ExploreConcepts(filename, minsup, minconf, 0).run();
         List<Rule> rules = new ArrayList<Rule>(unorderedRules);
+        // リフト順に並び替え
         Collections.sort(rules, new Comparator<Rule>() {
             @Override
             public int compare(Rule r0, Rule r1) {
@@ -21,7 +22,6 @@ public class Main {
             }
         });
 
-        System.out.println("=============================");
         for (Rule elm : rules) {
             System.out.println(elm);
         }
