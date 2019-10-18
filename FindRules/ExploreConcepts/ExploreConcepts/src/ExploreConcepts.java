@@ -13,8 +13,6 @@ import java.util.function.*;
 public class ExploreConcepts {
 
     private List<Concept> solution;
-    private Queue<Triplet> exploration;
-    private Queue<Triplet> nextExploration; // explorationを段階的にする
 
     private int[] context = null; // 文脈
     private int objNum = 0; // オブジェクト数
@@ -35,8 +33,6 @@ public class ExploreConcepts {
         this.targetIndex = targetIndex;
 
         solution = new ArrayList<>();
-        exploration = new PriorityQueue<Triplet>();
-        nextExploration = new PriorityQueue<Triplet>();
 
         readContext(file);
         prepare();
@@ -53,6 +49,8 @@ public class ExploreConcepts {
     }
 
     private List<Concept> solve() {
+        private Queue<Triplet> exploration = new PriorityQueue<Triplet>();
+        private Queue<Triplet> nextExploration = new PriorityQueue<Triplet>(); // explorationを段階的にする
 
         // 初期状態
         Concept top = computeClosure(null, null);
