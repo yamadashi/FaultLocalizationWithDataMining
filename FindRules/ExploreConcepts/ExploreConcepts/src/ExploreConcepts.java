@@ -47,16 +47,17 @@ public class ExploreConcepts {
     private List<Concept> solve() {
 
         List<Concept> solution = new ArrayList<>();
-        Queue<Triplet> exploration = new PriorityQueue<Triplet>();
+        Queue<Triplet> exploration = calcInitialExploration();
 
         // 局所的なヘルパー関数群
-        BiFunction<int[], Integer, int[]> flagSet = (arr, index) -> {
-            int[] rtn = arr.clone();
-            int INTSIZE = Constants.INTSIZE;
-            rtn[index / INTSIZE] |= (1 << (index % Constants.INTSIZE - 1));
+        BinaryOperator<int[]> union = (s0, s1) -> {
+            int[] rtn = s0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                int tmp = s1[i];
+                rtn[i] |= tmp;
+            }
             return rtn;
         };
-        // calcIncrements内でしか使わないが複数回呼び出される関数なので生成コストを考えてこのスコープで用意
         BinaryOperator<int[]> intersection = (s0, s1) -> {
             int[] rtn = s0.clone();
             for (int i = 0; i < rtn.length; i++) {
@@ -64,8 +65,6 @@ public class ExploreConcepts {
             }
             return rtn;
         };
-
-        // 初期状態
 
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
@@ -77,7 +76,7 @@ public class ExploreConcepts {
             Statistics stat = filterRes.getSecond();
 
             if (KEEP || CONTINUE) {
-                int[] int_s = flagSet.apply(triplet.getIntent(), triplet.getMap().getX());
+                int[] int_s = union.apply(triplet.getIntent(), triplet.getMap().getX());
 
                 if (KEEP) {
                     solution.add(new Concept(triplet.getMap().getExtent(), int_s, stat));
@@ -138,62 +137,82 @@ public class ExploreConcepts {
         List<Mapping> incr = new ArrayList<>();
 
         int INTSIZE = Constants.INTSIZE;
-        int[] topExt = new int[intObjLen];
-        int[] topInt = new int[intAttrLen];
-        Arrays.fill(topExt, 0);
-        Arrays.fill(topInt, Constants.BIT_MAX);
+        int[] topExtent = new int[intObjLen];
+        int[] topIntent = new int[intAttrLen];
 
-        // 全オブジェクトに対応するbitを立たせる
+        // 局所的なヘルパー関数
+        BinaryOperator<int[]> difference = (s0, s1) -> {
+            int[] rtn = s0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                rtn[i] &= ~s1[i];
+            }
+            return rtn;
+        };
+
+        // 全オブジェクトに対応するbitを立てる
+        Arrays.fill(topExtent, 0);
         for (int i = 0; i < intObjLen - 1; i++) {
-            topExt[i] = Constants.BIT_MAX;
+            topExtent[i] = Constants.BIT_MAX;
         }
         for (int i = 0; i < objNum % INTSIZE; i++) {
-            topExt[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
+            topExtent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
         }
-
-        for (int j = 0; j < objNum; ++j) {
-            for (int i = 0; i < intAttrLen; ++i)
-                topInt[i] &= context[intAttrLen * j + i];
+        // 全オブジェクトに共通の属性bitを立てる
+        Arrays.fill(topIntent, Constants.BIT_MAX);
+        for (int i = 0; i < objNum; i++) {
+            for (int j = 0; j < intAttrLen; j++)
+                topIntent[j] &= context[intAttrLen * i + j];
         }
-
+        // incrの計算
         for (int X = 0; X < attrNum; X++) {
-
-        }
-        return initial;
-
-        if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
-            // 全オブジェクトに対応するbitを立たせる
-            for (int i = 0; i < intObjLen - 1; ++i) {
-                extent[i] = Constants.BIT_MAX;
-            }
-            for (int i = 0; i < objNum % INTSIZE; i++) {
-                extent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
+            int[] newExtent = new int[intObjLen];
+            // X追加後のextentを計算
+            boolean empty = true; // X追加後のextentが空集合
+            for (int i = 0; i < intObjLen; i++) {
+                newExtent[i] = topExtent[i] & objHas[X][i];
+                if (newExtent[i] != 0) {
+                    empty = false;
+                }
             }
 
-            for (int j = 0; j < objNum; ++j) {
-                for (int i = 0; i < intAttrLen; ++i)
-                    intent[i] &= context[intAttrLen * j + i];
-            }
-            // top概念のみこの時点でStatisticsを計算（他コンセプトは必要なときに計算)
-            stat = calcStat(extent);
-        } else {
-            for (int k = 0; k < intObjLen; ++k) {
-                extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
-                // 共通のオブジェクトがあった場合
-                if (extent[k] != 0) {
-                    for (int l = 0; l < INTSIZE; ++l) {
-                        if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
-                            // (k*INTSIZE+l)番目のオブジェクトが共通
-                            for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j) {
-                                intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
+            if (!empty) {
+                int[] newIntent = new int[intAttrLen];
+                // X追加後のintentの計算
+                for (int i = 0; i < intObjLen; i++) {
+                    for (int j = 0; j < INTSIZE; j++) {
+                        // (i*INTSIZE+j)番目のオブジェクトが共通
+                        if ((newExtent[i] & (1 << (INTSIZE - j - 1))) != 0) {
+                            for (int k = 0, l = intAttrLen * (i * INTSIZE + j); k < intAttrLen; k++, l++) {
+                                newIntent[k] &= context[l]; // (i*INTSIZE+j)番目のオブジェクトが持ってない属性を除く
                             }
                         }
                     }
-                } else {
-                    return null;
                 }
+                int[] diff = difference.apply(newIntent, topIntent);
+                incr.add(new Mapping(newExtent, diff));
             }
         }
+
+        for (Mapping map : incr) {
+            initial.add(new Triplet(map, topIntent, incr));
+        }
+
+        return initial;
+        // for (int k = 0; k < intObjLen; ++k) {
+        // extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
+        // // 共通のオブジェクトがあった場合
+        // if (extent[k] != 0) {
+        // for (int l = 0; l < INTSIZE; ++l) {
+        // if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
+        // // (k*INTSIZE+l)番目のオブジェクトが共通
+        // for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j)
+        // {
+        // intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
+        // }
+        // }
+        // }
+        // }
+        // }
     }
 
     /*
@@ -307,51 +326,52 @@ public class ExploreConcepts {
         }
     }
 
-    private Concept computeClosure(Concept prev, int[] attrExtent) {
+    // private Concept computeClosure(Concept prev, int[] attrExtent) {
 
-        int[] extent = new int[intObjLen];
-        int[] intent = new int[intAttrLen];
-        Statistics stat = null;
+    // int[] extent = new int[intObjLen];
+    // int[] intent = new int[intAttrLen];
+    // Statistics stat = null;
 
-        Arrays.fill(extent, 0);
-        Arrays.fill(intent, Constants.BIT_MAX);
+    // Arrays.fill(extent, 0);
+    // Arrays.fill(intent, Constants.BIT_MAX);
 
-        int INTSIZE = Constants.INTSIZE;
-        if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
-            // 全オブジェクトに対応するbitを立たせる
-            for (int i = 0; i < intObjLen - 1; ++i) {
-                extent[i] = Constants.BIT_MAX;
-            }
-            for (int i = 0; i < objNum % INTSIZE; i++) {
-                extent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
-            }
+    // int INTSIZE = Constants.INTSIZE;
+    // if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
+    // // 全オブジェクトに対応するbitを立たせる
+    // for (int i = 0; i < intObjLen - 1; ++i) {
+    // extent[i] = Constants.BIT_MAX;
+    // }
+    // for (int i = 0; i < objNum % INTSIZE; i++) {
+    // extent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
+    // }
 
-            for (int j = 0; j < objNum; ++j) {
-                for (int i = 0; i < intAttrLen; ++i)
-                    intent[i] &= context[intAttrLen * j + i];
-            }
-            // top概念のみこの時点でStatisticsを計算（他コンセプトは必要なときに計算)
-            stat = calcStat(extent);
-        } else {
-            for (int k = 0; k < intObjLen; ++k) {
-                extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
-                // 共通のオブジェクトがあった場合
-                if (extent[k] != 0) {
-                    for (int l = 0; l < INTSIZE; ++l) {
-                        if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
-                            // (k*INTSIZE+l)番目のオブジェクトが共通
-                            for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j) {
-                                intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
-                            }
-                        }
-                    }
-                } else {
-                    return null;
-                }
-            }
-        }
-        return new Concept(extent, intent, stat);
-    }
+    // for (int j = 0; j < objNum; ++j) {
+    // for (int i = 0; i < intAttrLen; ++i)
+    // intent[i] &= context[intAttrLen * j + i];
+    // }
+    // // top概念のみこの時点でStatisticsを計算（他コンセプトは必要なときに計算)
+    // stat = calcStat(extent);
+    // } else {
+    // for (int k = 0; k < intObjLen; ++k) {
+    // extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
+    // // 共通のオブジェクトがあった場合
+    // if (extent[k] != 0) {
+    // for (int l = 0; l < INTSIZE; ++l) {
+    // if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
+    // // (k*INTSIZE+l)番目のオブジェクトが共通
+    // for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j)
+    // {
+    // intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
+    // }
+    // }
+    // }
+    // } else {
+    // return null;
+    // }
+    // }
+    // }
+    // return new Concept(extent, intent, stat);
+    // }
 
     /*
      * private List<Triplet> getChildren(Concept par, int attrOffset) {
