@@ -34,14 +34,14 @@ public class ExploreConcepts {
         prepare();
     }
 
-    public void run() {
+    public Set<Rule> run() {
         List<Concept> sol = solve();
         System.out.println("=============================");
         for (Concept c : sol) {
             System.out.println(c.getStat() + "\n\t" + c);
         }
         System.out.println("=============================");
-        // return makeRules(sol);
+        return calcRules(sol);
     }
 
     private List<Concept> solve() {
@@ -82,8 +82,7 @@ public class ExploreConcepts {
                     solution.add(new Concept(triplet.getMap().getExtent(), int_s, stat));
                 }
                 if (CONTINUE) {
-                    List<Mapping> incr_s = calcIncrements(triplet.getMap().getExtent(), triplet.getIncr(),
-                            intersection);
+                    List<Mapping> incr_s = calcIncrements(triplet.getMap(), triplet.getIncr(), intersection);
                     for (Mapping map : incr_s) {
                         exploration.add(new Triplet(map, int_s, incr_s));
                     }
@@ -92,38 +91,14 @@ public class ExploreConcepts {
         }
 
         return solution;
-        /*
-         * // 初期状態 Concept top = computeClosure(null, null); for (Triplet tri :
-         * getChildren(top, 0)) { exploration.add(tri); } // 同じ段のコンセプトを保持しておくリスト
-         * List<Concept> layer = new ArrayList<Concept>(); Runnable setLayer = () -> {
-         * layer.clear(); for (Triplet tri : exploration) {
-         * layer.add(tri.getMap().getChild()); } }; setLayer.run();
-         * 
-         * while (!exploration.isEmpty()) { Triplet triplet = exploration.poll();
-         * Concept s = triplet.getMap().getChild();
-         * 
-         * // FILTERの結果の取得 Pair<Boolean, Boolean> flags = FILTER(s); boolean KEEP =
-         * flags.getFirst(); boolean CONTINUE = flags.getSecond();
-         * 
-         * if (KEEP || CONTINUE) { s.setParentCandidates(layer);
-         * 
-         * if (KEEP) { solution.add(s); } if (CONTINUE) { int diffAttr =
-         * triplet.getMap().getDiff(); List<Triplet> children = getChildren(s, diffAttr
-         * + 1); if (children == null) continue;
-         * 
-         * for (Triplet tri : children) { nextExploration.add(tri); } } }
-         * 
-         * if (exploration.isEmpty()) { exploration = nextExploration; setLayer.run();
-         * nextExploration = new PriorityQueue<>(); } }
-         * 
-         * return solution;
-         */
     }
 
-    private List<Mapping> calcIncrements(int[] ext_s, List<Mapping> incr_ps, BinaryOperator<int[]> intersection) {
+    private List<Mapping> calcIncrements(Mapping map_ps, List<Mapping> incr_ps, BinaryOperator<int[]> intersection) {
         List<Mapping> incr_s = new ArrayList<>();
+        int[] ext_s = map_ps.getExtent();
         for (Mapping map : incr_ps) {
-            // ext_s -> X は除かなくていいのか？
+            if (map == map_ps)
+                continue;
             int[] c = intersection.apply(ext_s, map.getExtent());
             if (bitCount(c) >= minsupp) {
                 incr_s.add(new Mapping(c, map.getX()));
@@ -177,13 +152,14 @@ public class ExploreConcepts {
 
             if (!empty) {
                 int[] newIntent = new int[intAttrLen];
+                Arrays.fill(newIntent, Constants.BIT_MAX);
                 // X追加後のintentの計算
                 for (int i = 0; i < intObjLen; i++) {
                     for (int j = 0; j < INTSIZE; j++) {
-                        // (i*INTSIZE+j)番目のオブジェクトが共通
+                        // (iINTSIZE+j)番目のオブジェクトが共通
                         if ((newExtent[i] & (1 << (INTSIZE - j - 1))) != 0) {
                             for (int k = 0, l = intAttrLen * (i * INTSIZE + j); k < intAttrLen; k++, l++) {
-                                newIntent[k] &= context[l]; // (i*INTSIZE+j)番目のオブジェクトが持ってない属性を除く
+                                newIntent[k] &= context[l]; // (iINTSIZE+j)番目のオブジェクトが持ってない属性を除く
                             }
                         }
                     }
@@ -198,47 +174,78 @@ public class ExploreConcepts {
         }
 
         return initial;
-        // for (int k = 0; k < intObjLen; ++k) {
-        // extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
-        // // 共通のオブジェクトがあった場合
-        // if (extent[k] != 0) {
-        // for (int l = 0; l < INTSIZE; ++l) {
-        // if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
-        // // (k*INTSIZE+l)番目のオブジェクトが共通
-        // for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j)
-        // {
-        // intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
-        // }
-        // }
-        // }
-        // }
-        // }
     }
 
-    /*
-     * private Set<Rule> makeRules(List<Concept> sol) { Set<Rule> rules = new
-     * HashSet<Rule>();
-     * 
-     * // 局所的なヘルパー関数群 BiPredicate<int[], Integer> flagIsSet = (data, index) -> { int
-     * INTSIZE = Constants.INTSIZE; return (data[index / INTSIZE] & (1 << (index %
-     * INTSIZE - 1))) != 0; }; BiPredicate<int[], int[]> arrEqual = (arr0, arr1) ->
-     * { boolean rtn = true; for (int i = 0; i < arr0.length; i++) { if (arr0[i] !=
-     * arr1[i]) rtn = false; } return rtn; }; BiFunction<int[], Integer, int[]>
-     * flagUnset = (origin, index) -> { int[] rtn = origin.clone(); int INTSIZE =
-     * Constants.INTSIZE; rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE
-     * - 1)); return rtn; };
-     * 
-     * for (Concept c : sol) { // 解の概念の内包がターゲットの属性を持っている場合 if
-     * (flagIsSet.test(c.getIntent(), targetIndex)) { int[] removed =
-     * flagUnset.apply(c.getIntent(), targetIndex); // 属性がターゲットのみの場合ルールとして成立しない if
-     * (bitCount(removed) == 0) continue; boolean added = false; //
-     * 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用 for (Concept candidate :
-     * c.getParentCandidates()) { if (arrEqual.test(candidate.getIntent(), removed))
-     * { rules.add(new Rule(removed, targetIndex, candidate.getStat())); added =
-     * true; break; } } if (!added) { rules.add(new Rule(removed, targetIndex,
-     * c.getStat())); } } else { rules.add(new Rule(c.getIntent(), targetIndex,
-     * c.getStat())); } } return rules; }//
-     */
+    private Set<Rule> calcRules(List<Concept> sol) {
+        Set<Rule> rules = new HashSet<Rule>();
+
+        // 局所的なヘルパー関数群
+        BiPredicate<int[], Integer> flagIsSet = (data, index) -> {
+            int INTSIZE = Constants.INTSIZE;
+            return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
+        };
+
+        BiPredicate<int[], int[]> arrEqual = (arr0, arr1) -> {
+            boolean rtn = true;
+            for (int i = 0; i < arr0.length; i++) {
+                if (arr0[i] != arr1[i])
+                    rtn = false;
+            }
+            return rtn;
+        };
+        BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
+            int[] rtn = origin.clone();
+            int INTSIZE = Constants.INTSIZE;
+            rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE - 1));
+            return rtn;
+        };
+        UnaryOperator<int[]> calcExtent = intent -> {
+            int[] ext = new int[intObjLen];
+            Arrays.fill(ext, Constants.BIT_MAX);
+            for (int i = 0; i < intAttrLen; i++) {
+                if ((intent[i] & (1 << (Constants.INTSIZE - 1 - i))) == 0)
+                    continue;
+                for (int j = 0; j < intObjLen; j++)
+                    ext[j] &= objHas[i][j];
+            }
+            return ext;
+        };
+
+        for (Concept c : sol) {
+            int[] intent = c.getIntent();
+            if (flagIsSet.test(intent, targetIndex)) {
+                int[] removed = flagUnset.apply(intent, targetIndex);
+                if (bitCount(removed) == 0)
+                    continue;
+                rules.add(new Rule(removed, targetIndex, calcStat(calcExtent.apply(removed))));
+            } else {
+                rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
+            }
+        }
+
+        // for (Concept c : sol) { // 解の概念の内包がターゲットの属性を持っている場合
+        // if (flagIsSet.test(c.getIntent(), targetIndex)) {
+        // int[] removed = flagUnset.apply(c.getIntent(), targetIndex); //
+        // 属性がターゲットのみの場合ルールとして成立しない
+        // if (bitCount(removed) == 0)
+        // continue;
+        // boolean added = false; // 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用
+        // for (Concept candidate : c.getParentCandidates()) {
+        // if (arrEqual.test(candidate.getIntent(), removed)) {
+        // rules.add(new Rule(removed, targetIndex, candidate.getStat()));
+        // added = true;
+        // break;
+        // }
+        // }
+        // if (!added) {
+        // rules.add(new Rule(removed, targetIndex, c.getStat()));
+        // }
+        // } else {
+        // rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
+        // }
+        // }
+        return rules;
+    }
 
     private Pair<Pair<Boolean, Boolean>, Statistics> FILTER(int[] ext) {
 
@@ -326,79 +333,6 @@ public class ExploreConcepts {
         }
     }
 
-    // private Concept computeClosure(Concept prev, int[] attrExtent) {
-
-    // int[] extent = new int[intObjLen];
-    // int[] intent = new int[intAttrLen];
-    // Statistics stat = null;
-
-    // Arrays.fill(extent, 0);
-    // Arrays.fill(intent, Constants.BIT_MAX);
-
-    // int INTSIZE = Constants.INTSIZE;
-    // if (attrExtent == null) { // 初期状態としてルート(トップ)の概念を返す
-    // // 全オブジェクトに対応するbitを立たせる
-    // for (int i = 0; i < intObjLen - 1; ++i) {
-    // extent[i] = Constants.BIT_MAX;
-    // }
-    // for (int i = 0; i < objNum % INTSIZE; i++) {
-    // extent[intObjLen - 1] |= (1 << (INTSIZE - i - 1));
-    // }
-
-    // for (int j = 0; j < objNum; ++j) {
-    // for (int i = 0; i < intAttrLen; ++i)
-    // intent[i] &= context[intAttrLen * j + i];
-    // }
-    // // top概念のみこの時点でStatisticsを計算（他コンセプトは必要なときに計算)
-    // stat = calcStat(extent);
-    // } else {
-    // for (int k = 0; k < intObjLen; ++k) {
-    // extent[k] = prev.getExtent()[k] & attrExtent[k]; // 共通のオブジェクト
-    // // 共通のオブジェクトがあった場合
-    // if (extent[k] != 0) {
-    // for (int l = 0; l < INTSIZE; ++l) {
-    // if ((extent[k] & (1 << (INTSIZE - l - 1))) != 0) {
-    // // (k*INTSIZE+l)番目のオブジェクトが共通
-    // for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j)
-    // {
-    // intent[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
-    // }
-    // }
-    // }
-    // } else {
-    // return null;
-    // }
-    // }
-    // }
-    // return new Concept(extent, intent, stat);
-    // }
-
-    /*
-     * private List<Triplet> getChildren(Concept par, int attrOffset) {
-     * List<Triplet> children = new ArrayList<Triplet>(); List<Mapping> increments =
-     * new ArrayList<Mapping>(); if (attrOffset >= attrNum) return null;
-     * 
-     * System.out.println("par:" + par);
-     * 
-     * int INTSIZE = Constants.INTSIZE; ATTR: for (int i = attrOffset; i < attrNum;
-     * i++) { // 属性をすでに内包として持っている場合 if ((par.getIntent()[i / INTSIZE] & (1 <<
-     * (INTSIZE - (i % INTSIZE) - 1))) != 0) { continue; } Concept child =
-     * computeClosure(par, objHas[i]); if (child == null) continue;
-     * 
-     * // 親conceptと内包が一致していない場合 for (int j = 0; j < i / INTSIZE; j++) { if
-     * ((child.getIntent()[j] ^ par.getIntent()[j]) != 0) { continue ATTR; } } if
-     * (((child.getIntent()[i / INTSIZE] ^ par.getIntent()[i / INTSIZE]) & upto[i %
-     * INTSIZE]) != 0) { continue; }
-     * 
-     * System.out.println("  diff:" + i + " child:" + child); increments.add(new
-     * Mapping(child, i)); }
-     * 
-     * for (Mapping mapping : increments) { children.add(new Triplet(mapping, par,
-     * increments)); }
-     * 
-     * if (children.size() == 0) return null; return children; }
-     */
-
     private Statistics calcStat(int[] ext) {
 
         // targetIndexを持つobjectsとextentの共通集合( ext_T ∩ ext_s )
@@ -415,7 +349,7 @@ public class ExploreConcepts {
     }
 
     // int[] の立っているbit数を数える
-    static int bitCount(int[] arr) {
+    public static int bitCount(int[] arr) {
         int rtn = 0;
         for (int e : arr) {
             rtn += Integer.bitCount(e);
