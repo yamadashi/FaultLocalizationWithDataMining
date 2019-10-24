@@ -184,15 +184,6 @@ public class ExploreConcepts {
             int INTSIZE = Constants.INTSIZE;
             return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
         };
-
-        BiPredicate<int[], int[]> arrEqual = (arr0, arr1) -> {
-            boolean rtn = true;
-            for (int i = 0; i < arr0.length; i++) {
-                if (arr0[i] != arr1[i])
-                    rtn = false;
-            }
-            return rtn;
-        };
         BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
             int[] rtn = origin.clone();
             int INTSIZE = Constants.INTSIZE;
@@ -202,8 +193,9 @@ public class ExploreConcepts {
         UnaryOperator<int[]> calcExtent = intent -> {
             int[] ext = new int[intObjLen];
             Arrays.fill(ext, Constants.BIT_MAX);
-            for (int i = 0; i < intAttrLen; i++) {
-                if ((intent[i] & (1 << (Constants.INTSIZE - 1 - i))) == 0)
+            int INTSIZE = Constants.INTSIZE;
+            for (int i = 0; i < attrNum; i++) {
+                if ((intent[i / INTSIZE] & (1 << (INTSIZE - 1 - (i % INTSIZE)))) == 0)
                     continue;
                 for (int j = 0; j < intObjLen; j++)
                     ext[j] &= objHas[i][j];
@@ -222,28 +214,6 @@ public class ExploreConcepts {
                 rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
             }
         }
-
-        // for (Concept c : sol) { // 解の概念の内包がターゲットの属性を持っている場合
-        // if (flagIsSet.test(c.getIntent(), targetIndex)) {
-        // int[] removed = flagUnset.apply(c.getIntent(), targetIndex); //
-        // 属性がターゲットのみの場合ルールとして成立しない
-        // if (bitCount(removed) == 0)
-        // continue;
-        // boolean added = false; // 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用
-        // for (Concept candidate : c.getParentCandidates()) {
-        // if (arrEqual.test(candidate.getIntent(), removed)) {
-        // rules.add(new Rule(removed, targetIndex, candidate.getStat()));
-        // added = true;
-        // break;
-        // }
-        // }
-        // if (!added) {
-        // rules.add(new Rule(removed, targetIndex, c.getStat()));
-        // }
-        // } else {
-        // rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
-        // }
-        // }
         return rules;
     }
 
