@@ -1,22 +1,22 @@
 public class Mapping {
-    private Concept child;
-    private int diff; // 差分属性の番号
+    private int[] ext_s;
+    private int[] X; // 差分集合
 
-    public Mapping(Concept child, int diff) {
-        this.child = child;
-        this.diff = diff;
+    public Mapping(int[] ext_s, int[] X) {
+        this.ext_s = ext_s;
+        this.X = X;
     }
 
-    public Concept getChild() {
-        return child;
+    public int[] getExtent() {
+        return ext_s;
     }
 
-    public int getDiff() {
-        return diff;
+    public int[] getX() {
+        return X;
     }
 
     @Override
     public String toString() {
-        return "("+child+")→"+diff;
+        return "(" + Concept.toString(ext_s) + ")→" + Concept.toString(X);
     }
 }
