@@ -34,20 +34,17 @@ public class ExploreConcepts {
         prepare();
     }
 
-    public void run() {
+    public Set<Rule> run() {
         List<Concept> sol = solve();
         System.out.println("=============================");
         for (Concept c : sol) {
             System.out.println(c.getStat() + "\n\t" + c);
         }
         System.out.println("=============================");
-        return makeRules(sol);
+        return calcRules(sol);
     }
 
     private List<Concept> solve() {
-        private Queue<Triplet> exploration = new PriorityQueue<Triplet>();
-        private Queue<Triplet> nextExploration = new PriorityQueue<Triplet>(); // explorationを段階的にする
-
         List<Concept> solution = new ArrayList<>();
         Queue<Triplet> exploration = calcInitialExploration();
 
@@ -84,8 +81,7 @@ public class ExploreConcepts {
                     solution.add(new Concept(triplet.getMap().getExtent(), int_s, stat));
                 }
                 if (CONTINUE) {
-                    List<Mapping> incr_s = calcIncrements(triplet.getMap().getExtent(), triplet.getIncr(),
-                            intersection);
+                    List<Mapping> incr_s = calcIncrements(triplet.getMap(), triplet.getIncr(), intersection);
                     for (Mapping map : incr_s) {
                         exploration.add(new Triplet(map, int_s, incr_s));
                     }
@@ -96,10 +92,12 @@ public class ExploreConcepts {
         return solution;
     }
 
-    private List<Mapping> calcIncrements(int[] ext_s, List<Mapping> incr_ps, BinaryOperator<int[]> intersection) {
+    private List<Mapping> calcIncrements(Mapping map_ps, List<Mapping> incr_ps, BinaryOperator<int[]> intersection) {
         List<Mapping> incr_s = new ArrayList<>();
+        int[] ext_s = map_ps.getExtent();
         for (Mapping map : incr_ps) {
-            // ext_s -> X は除かなくていいのか？
+            if (map == map_ps)
+                continue;
             int[] c = intersection.apply(ext_s, map.getExtent());
             if (bitCount(c) >= minsupp) {
                 incr_s.add(new Mapping(c, map.getX()));
@@ -153,13 +151,14 @@ public class ExploreConcepts {
 
             if (!empty) {
                 int[] newIntent = new int[intAttrLen];
+                Arrays.fill(newIntent, Constants.BIT_MAX);
                 // X追加後のintentの計算
                 for (int i = 0; i < intObjLen; i++) {
                     for (int j = 0; j < INTSIZE; j++) {
-                        // (i*INTSIZE+j)番目のオブジェクトが共通
+                        // (iINTSIZE+j)番目のオブジェクトが共通
                         if ((newExtent[i] & (1 << (INTSIZE - j - 1))) != 0) {
                             for (int k = 0, l = intAttrLen * (i * INTSIZE + j); k < intAttrLen; k++, l++) {
-                                newIntent[k] &= context[l]; // (i*INTSIZE+j)番目のオブジェクトが持ってない属性を除く
+                                newIntent[k] &= context[l]; // (iINTSIZE+j)番目のオブジェクトが持ってない属性を除く
                             }
                         }
                     }
@@ -174,6 +173,47 @@ public class ExploreConcepts {
         }
 
         return initial;
+    }
+
+    private Set<Rule> calcRules(List<Concept> sol) {
+        Set<Rule> rules = new HashSet<Rule>();
+
+        // 局所的なヘルパー関数群
+        BiPredicate<int[], Integer> flagIsSet = (data, index) -> {
+            int INTSIZE = Constants.INTSIZE;
+            return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
+        };
+        BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
+            int[] rtn = origin.clone();
+            int INTSIZE = Constants.INTSIZE;
+            rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE - 1));
+            return rtn;
+        };
+        UnaryOperator<int[]> calcExtent = intent -> {
+            int[] ext = new int[intObjLen];
+            Arrays.fill(ext, Constants.BIT_MAX);
+            int INTSIZE = Constants.INTSIZE;
+            for (int i = 0; i < attrNum; i++) {
+                if ((intent[i / INTSIZE] & (1 << (INTSIZE - 1 - (i % INTSIZE)))) == 0)
+                    continue;
+                for (int j = 0; j < intObjLen; j++)
+                    ext[j] &= objHas[i][j];
+            }
+            return ext;
+        };
+
+        for (Concept c : sol) {
+            int[] intent = c.getIntent();
+            if (flagIsSet.test(intent, targetIndex)) {
+                int[] removed = flagUnset.apply(intent, targetIndex);
+                if (bitCount(removed) == 0)
+                    continue;
+                rules.add(new Rule(removed, targetIndex, calcStat(calcExtent.apply(removed))));
+            } else {
+                rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
+            }
+        }
+        return rules;
     }
 
     private Pair<Pair<Boolean, Boolean>, Statistics> FILTER(int[] ext) {
@@ -278,7 +318,7 @@ public class ExploreConcepts {
     }
 
     // int[] の立っているbit数を数える
-    static int bitCount(int[] arr) {
+    public static int bitCount(int[] arr) {
         int rtn = 0;
         for (int e : arr) {
             rtn += Integer.bitCount(e);

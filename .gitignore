@@ -1,15 +1,15 @@
 .vscode
 
-/CollectContext/target/*
-!/CollectContext/target/*.h
-!/CollectContext/target/*.c
+/CollectData/target/*
+!/CollectData/target/*.h
+!/CollectData/target/*.c
 
-/CollectContext/ProcTraceInfo/*
-!/CollectContext/ProcTraceInfo/*.java
+/CollectData/ProcTraceInfo/*
+!/CollectData/ProcTraceInfo/*.java
 
-/CollectContext/testdata/src/*
-!/CollectContext/testdata/src/*.h
-!/CollectContext/testdata/src/*.c
+/CollectData/testdata/src/*
+!/CollectData/testdata/src/*.h
+!/CollectData/testdata/src/*.c
 
 
 /CalcConcepts/bin/*

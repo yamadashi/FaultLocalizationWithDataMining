@@ -1,23 +1,26 @@
 #!/bin/bash
-outputfile="data.csv"
+outputfile=$2
 covfile="tritype.c.gcov"
 testfile="testdata"
 stdpath=$PWD/`dirname $0`
+targetPG=$1
+targetdir=$stdpath/targets/$targetPG
+
 
 function func() {
-    cd $stdpath/target
-    ./main.exe ../$outputfile $1 $2 $3 $4
+    cd $targetdir
+    ./main.exe $stdpath/$outputfile $1 $2 $3 $4
     gcov tritype.c > /dev/null
 
     cd $stdpath/ProcTraceInfo
-    java TraceInfoProcessor ../target/$covfile ../$outputfile
+    java TraceInfoProcessor $targetdir/$covfile $stdpath/$outputfile
 
-    cd $stdpath/target
+    cd $targetdir
     rm *.gcda *.c.gcov
 }
 
 #ビルド
-cd $stdpath/target
+cd $targetdir
 gcc -coverage -o main.exe main.c tritype.c
 cd $stdpath/ProcTraceInfo
 javac -encoding UTF8 TraceInfoProcessor.java
