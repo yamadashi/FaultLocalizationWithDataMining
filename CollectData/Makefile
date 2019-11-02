@@ -1,7 +1,16 @@
+targetPG:=SomeMutants
+output:=data.csv
+
 run:
 	testdata/testdata.sh
-	./compose.sh
+	./compose.sh $(targetPG) $(output)
+
+create/test:
+	testdata/testdata.sh
+
+create/context:
+	./compose.sh $(targetPG) $(output)
 
 clean:
-	-rm data.csv
+	-rm $(output)
 	-rm testdata/testdata
