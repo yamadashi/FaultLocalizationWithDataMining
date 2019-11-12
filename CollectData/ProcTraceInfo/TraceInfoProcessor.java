@@ -58,6 +58,7 @@ public class TraceInfoProcessor {
     private static List<Integer> getPassLineNums(BufferedReader r) {
         List<Integer> passLineNums = new ArrayList<>();
         String line = null;
+        boolean prePassed = false;
 
         do {
             try {
@@ -84,11 +85,18 @@ public class TraceInfoProcessor {
 
             // 行通過フラグ
             boolean passed = false;
+            String passCountStr = tmp[0].trim();
             try {
-                passed = Integer.parseInt(tmp[0].trim()) > 0;
+                passed = Integer.parseInt(passCountStr) > 0;
+                prePassed = passed;
             } catch (NumberFormatException e) {
                 // "-","#####"の時通過回数は0
                 passed = false;
+                // "#####"のときはifの条件行も未通過とするため最新の通過行情報(ifの条件部分)を削除する
+                if (prePassed && passCountStr.equals("#####")) {
+                    passLineNums.remove(passLineNums.size() - 1);
+                }
+                prePassed = false;
             }
 
             if (passed)

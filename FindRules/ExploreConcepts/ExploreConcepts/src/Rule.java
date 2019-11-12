@@ -13,6 +13,14 @@ public class Rule {
         return stat;
     }
 
+    public int[] getPremise() {
+        return premise;
+    }
+
+    public void setPremise(int[] premise) {
+        this.premise = premise;
+    }
+
     @Override
     public int hashCode() {
         return Integer.hashCode(premise[0]);
@@ -20,10 +28,11 @@ public class Rule {
 
     @Override
     public boolean equals(Object o) {
-        Rule otherRule = (Rule)o;
+        Rule otherRule = (Rule) o;
         boolean rtn = true;
         for (int i = 0; i < premise.length; i++) {
-            if (premise[i] != otherRule.premise[i]) rtn = false;
+            if (premise[i] != otherRule.premise[i])
+                rtn = false;
         }
         return rtn;
     }

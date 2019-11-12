@@ -152,6 +152,22 @@ public class ExploreConcepts {
                 rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
             }
         }
+
+        // 不要な属性を削除
+        BinaryOperator<int[]> difference = (arr0, arr1) -> {
+            int[] rtn = arr0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                rtn[i] &= ~arr1[i];
+            }
+            return rtn;
+        };
+        int[] correctLines = calcCorrectLines();
+        System.out.println("correct:" + Concept.toString(correctLines));
+        for (Rule r : rules) {
+            int[] removedCorrectLine = difference.apply(r.getPremise(), correctLines);
+            r.setPremise(removedCorrectLine);
+        }
+
         return rules;
     }
 
@@ -339,6 +355,26 @@ public class ExploreConcepts {
         float lift = conf / ((float) bitCount(objHas[targetIndex]) / objNum);
 
         return new Statistics(sup, conf, lift);
+    }
+
+    private int[] calcCorrectLines() {
+        int[] correctLines = new int[intAttrLen];
+        Arrays.fill(correctLines, 0);
+        BiConsumer<int[], int[]> union = (arr0, arr1) -> {
+            for (int i = 0; i < arr0.length; i++) {
+                arr0[i] |= arr1[i];
+            }
+        };
+        for (int i = 0; i < objNum; i++) {
+            final int passIndex = 1;
+            boolean passed = (context[i * intAttrLen] & (1 << Constants.INTSIZE - 1 - passIndex)) != 0;
+            if (passed) {
+                int[] attrOfObj_i = Arrays.copyOfRange(context, i * intAttrLen, (i + 1) * intAttrLen);
+                System.out.println(Concept.toString(attrOfObj_i));
+                union.accept(correctLines, attrOfObj_i);
+            }
+        }
+        return correctLines;
     }
 
     // int[] の立っているbit数を数える

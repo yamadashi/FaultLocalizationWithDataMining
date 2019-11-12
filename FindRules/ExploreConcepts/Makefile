@@ -1,11 +1,14 @@
-INPUT:=data/testdata
+INPUT:=data/data.csv
 #OUTPUT:=
-MINSUP:=2
+MINSUP:=10
 MINCONF:=0.5
 
 run:
 	javac -d ExploreConcepts/bin -cp ExploreConcepts/src ExploreConcepts/src/Main.java
 	java -cp ExploreConcepts/bin Main $(INPUT) $(MINSUP) $(MINCONF)
+
+run/test:
+	$(MAKE) run INPUT=data/testdata MINSUP=2
 
 clean:
 	- rm ExploreConcepts/bin/*.class
