@@ -11,11 +11,6 @@ import java.io.File;
 import java.util.function.*;
 
 public class ExploreConcepts {
-
-    private List<Concept> solution;
-    private Queue<Triplet> exploration;
-    private Queue<Triplet> nextExploration; // explorationを段階的にする
-
     private int[] context = null; // 文脈
     private int objNum = 0; // オブジェクト数
     private int attrNum = 0; // 属性数
@@ -34,25 +29,53 @@ public class ExploreConcepts {
         this.minconf = minconf;
         this.targetIndex = targetIndex;
 
-        solution = new ArrayList<>();
-        exploration = new PriorityQueue<Triplet>();
-        nextExploration = new PriorityQueue<Triplet>();
-
         readContext(file);
         prepare();
     }
 
     public Set<Rule> run() {
-        List<Concept> sol = solve();
+        Set<Rule> failRules = makeRules(solve());
+        for (Rule r : failRules)
+            System.out.println(r);
         System.out.println("=============================");
-        for (Concept c : sol) {
-            System.out.println(c.getStat() + "\n\t" + c);
+
+        // passの場合のルールも計算
+        targetIndex = 1;
+        Set<Rule> passRules = makeRules(solve());
+        for (Rule r : passRules)
+            System.out.println(r);
+        System.out.println("=============================");
+
+        BiConsumer<int[], int[]> intersection = (arr0, arr1) -> {
+            for (int i = 0; i < arr0.length; i++) {
+                arr0[i] &= arr1[i];
+            }
+        };
+        BinaryOperator<int[]> difference = (arr0, arr1) -> {
+            int[] rtn = arr0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                rtn[i] &= ~arr1[i];
+            }
+            return rtn;
+        };
+        int[] passAttr = new int[intAttrLen];
+        Arrays.fill(passAttr, Constants.BIT_MAX);
+        for (Rule r : passRules) {
+            intersection.accept(passAttr, r.getPremise());
         }
-        System.out.println("=============================");
-        return makeRules(sol);
+
+        for (Rule r : failRules) {
+            r.setPremise(difference.apply(r.getPremise(), passAttr));
+        }
+
+        return failRules;
     }
 
     private List<Concept> solve() {
+
+        List<Concept> solution = new ArrayList<>();
+        Queue<Triplet> exploration = new PriorityQueue<>();
+        Queue<Triplet> nextExploration = new PriorityQueue<>(); // explorationを段階的にする
 
         // 初期状態
         Concept top = computeClosure(null, null);
@@ -61,13 +84,13 @@ public class ExploreConcepts {
         }
         // 同じ段のコンセプトを保持しておくリスト
         List<Concept> layer = new ArrayList<Concept>();
-        Runnable setLayer = () -> {
-            layer.clear();
-            for (Triplet tri : exploration) {
-                layer.add(tri.getMap().getChild());
+        BiConsumer<List<Concept>, Queue<Triplet>> setLayer = (l, exp) -> {
+            l.clear();
+            for (Triplet tri : exp) {
+                l.add(tri.getMap().getChild());
             }
         };
-        setLayer.run();
+        setLayer.accept(layer, exploration);
 
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
@@ -98,7 +121,7 @@ public class ExploreConcepts {
 
             if (exploration.isEmpty()) {
                 exploration = nextExploration;
-                setLayer.run();
+                setLayer.accept(layer, exploration);
                 nextExploration = new PriorityQueue<>();
             }
         }
@@ -112,7 +135,7 @@ public class ExploreConcepts {
         // 局所的なヘルパー関数群
         BiPredicate<int[], Integer> flagIsSet = (data, index) -> {
             int INTSIZE = Constants.INTSIZE;
-            return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
+            return (data[index / INTSIZE] & (1 << (INTSIZE - index % INTSIZE - 1))) != 0;
         };
         BiPredicate<int[], int[]> arrEqual = (arr0, arr1) -> {
             boolean rtn = true;
@@ -125,7 +148,7 @@ public class ExploreConcepts {
         BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
             int[] rtn = origin.clone();
             int INTSIZE = Constants.INTSIZE;
-            rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE - 1));
+            rtn[index / INTSIZE] &= ~(1 << (INTSIZE - index % INTSIZE - 1));
             return rtn;
         };
 
@@ -151,21 +174,6 @@ public class ExploreConcepts {
             } else {
                 rules.add(new Rule(c.getIntent(), targetIndex, c.getStat()));
             }
-        }
-
-        // 不要な属性を削除
-        BinaryOperator<int[]> difference = (arr0, arr1) -> {
-            int[] rtn = arr0.clone();
-            for (int i = 0; i < rtn.length; i++) {
-                rtn[i] &= ~arr1[i];
-            }
-            return rtn;
-        };
-        int[] correctLines = calcCorrectLines();
-        System.out.println("correct:" + Concept.toString(correctLines));
-        for (Rule r : rules) {
-            int[] removedCorrectLine = difference.apply(r.getPremise(), correctLines);
-            r.setPremise(removedCorrectLine);
         }
 
         return rules;
@@ -307,8 +315,6 @@ public class ExploreConcepts {
         if (attrOffset >= attrNum)
             return null;
 
-        System.out.println("par:" + par);
-
         int INTSIZE = Constants.INTSIZE;
         ATTR: for (int i = attrOffset; i < attrNum; i++) {
             // 属性をすでに内包として持っている場合
@@ -328,8 +334,6 @@ public class ExploreConcepts {
             if (((child.getIntent()[i / INTSIZE] ^ par.getIntent()[i / INTSIZE]) & upto[i % INTSIZE]) != 0) {
                 continue;
             }
-
-            System.out.println("  diff:" + i + " child:" + child);
             increments.add(new Mapping(child, i));
         }
 
@@ -355,26 +359,6 @@ public class ExploreConcepts {
         float lift = conf / ((float) bitCount(objHas[targetIndex]) / objNum);
 
         return new Statistics(sup, conf, lift);
-    }
-
-    private int[] calcCorrectLines() {
-        int[] correctLines = new int[intAttrLen];
-        Arrays.fill(correctLines, 0);
-        BiConsumer<int[], int[]> union = (arr0, arr1) -> {
-            for (int i = 0; i < arr0.length; i++) {
-                arr0[i] |= arr1[i];
-            }
-        };
-        for (int i = 0; i < objNum; i++) {
-            final int passIndex = 1;
-            boolean passed = (context[i * intAttrLen] & (1 << Constants.INTSIZE - 1 - passIndex)) != 0;
-            if (passed) {
-                int[] attrOfObj_i = Arrays.copyOfRange(context, i * intAttrLen, (i + 1) * intAttrLen);
-                System.out.println(Concept.toString(attrOfObj_i));
-                union.accept(correctLines, attrOfObj_i);
-            }
-        }
-        return correctLines;
     }
 
     // int[] の立っているbit数を数える

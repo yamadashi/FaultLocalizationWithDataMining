@@ -1,6 +1,6 @@
 INPUT:=data/data.csv
 #OUTPUT:=
-MINSUP:=10
+MINSUP:=30
 MINCONF:=0.5
 
 run:
