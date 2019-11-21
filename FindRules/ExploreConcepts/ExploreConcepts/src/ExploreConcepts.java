@@ -82,15 +82,16 @@ public class ExploreConcepts {
         for (Triplet tri : getChildren(top, 0)) {
             exploration.add(tri);
         }
-        // 同じ段のコンセプトを保持しておくリスト
-        List<Concept> layer = new ArrayList<Concept>();
-        BiConsumer<List<Concept>, Queue<Triplet>> setLayer = (l, exp) -> {
-            l.clear();
+
+        Function<Queue<Triplet>, List<Concept>> makeLayer = exp -> {
+            List<Concept> l = new ArrayList<>();
             for (Triplet tri : exp) {
                 l.add(tri.getMap().getChild());
             }
+            return l;
         };
-        setLayer.accept(layer, exploration);
+        // 同じ段のコンセプトを保持しておくリスト
+        List<Concept> layer = makeLayer.apply(exploration);
 
         while (!exploration.isEmpty()) {
             Triplet triplet = exploration.poll();
@@ -121,7 +122,7 @@ public class ExploreConcepts {
 
             if (exploration.isEmpty()) {
                 exploration = nextExploration;
-                setLayer.accept(layer, exploration);
+                layer = makeLayer.apply(exploration);
                 nextExploration = new PriorityQueue<>();
             }
         }
