@@ -34,7 +34,12 @@ public class ExploreConcepts {
     }
 
     public Set<Rule> run() {
-        return makeRules(solve());
+        List<Concept> sol = solve();
+        for (Concept c : sol) {
+            System.out.println(c);
+        }
+        System.out.println("=========================================");
+        return makeRules(sol);
     }
 
     private List<Concept> solve() {
@@ -112,20 +117,46 @@ public class ExploreConcepts {
             }
             return rtn;
         };
-        BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
-            int[] rtn = origin.clone();
+        BiFunction<int[], Integer, int[]> removeAttr = (origin, index) -> {
+            int[] removed = origin.clone();
             int INTSIZE = Constants.INTSIZE;
-            rtn[index / INTSIZE] &= ~(1 << (INTSIZE - index % INTSIZE - 1));
-            return rtn;
+            removed[index / INTSIZE] &= ~(1 << (INTSIZE - index % INTSIZE - 1));
+            // 補正
+            int[] ext = new int[intObjLen];
+            Arrays.fill(ext, Constants.BIT_MAX);
+            for (int i = 0; i < attrNum; i++) {
+                if ((removed[i / INTSIZE] & (1 << (INTSIZE - i % INTSIZE - 1))) != 0) {
+                    for (int j = 0; j < intObjLen; j++) {
+                        ext[j] &= objHas[i][j];
+                    }
+                }
+            }
+            int[] fixed = new int[intAttrLen];
+            Arrays.fill(fixed, Constants.BIT_MAX);
+            for (int k = 0; k < intObjLen; ++k) {
+                if (ext[k] != 0) { // オブジェクトがあった場合
+                    for (int l = 0; l < INTSIZE; ++l) {
+                        if ((ext[k] & (1 << (INTSIZE - l - 1))) != 0) { // (k*INTSIZE+l)番目のオブジェクトが存在
+                            for (int i = 0, j = intAttrLen * (k * INTSIZE + l); i < intAttrLen; ++i, ++j) {
+                                fixed[i] &= context[j]; // (k*INTSIZE+l)番目のオブジェクトが持ってない属性を除く
+                            }
+                        }
+                    }
+                } else
+                    continue;
+            }
+            fixed[index / INTSIZE] &= ~(1 << (INTSIZE - index % INTSIZE - 1));
+            return fixed;
         };
 
         for (Concept c : sol) {
             // 解の概念の内包がターゲットの属性を持っている場合
             if (flagIsSet.test(c.getIntent(), targetIndex)) {
-                int[] removed = flagUnset.apply(c.getIntent(), targetIndex);
+                int[] removed = removeAttr.apply(c.getIntent(), targetIndex);
                 // 属性がターゲットのみの場合ルールとして成立しない
                 if (bitCount(removed) == 0)
                     continue;
+
                 boolean added = false;
                 // 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用
                 for (Concept candidate : c.getParentCandidates()) {
@@ -210,7 +241,7 @@ public class ExploreConcepts {
                 upto[i] |= (1 << (INTSIZE - 1 - j));
             }
         }
-        // uptoは以下のような行列になる
+        // uptoは以下のような行列になる(元のCbOとはintent等の構造が少し違うのでuptoも違うが、問題なく動作する)
         // 0 0 0 .. 0 0
         // 1 0 0 .. 0 0
         // 1 1 0 .. 0 0
@@ -269,8 +300,7 @@ public class ExploreConcepts {
                             }
                         }
                     }
-                } else
-                    return null;
+                }
             }
         }
         return new Concept(extent, intent, stat);
