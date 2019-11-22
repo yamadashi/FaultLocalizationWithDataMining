@@ -34,41 +34,7 @@ public class ExploreConcepts {
     }
 
     public Set<Rule> run() {
-        Set<Rule> failRules = makeRules(solve());
-        for (Rule r : failRules)
-            System.out.println(r);
-        System.out.println("=============================");
-
-        // passの場合のルールも計算
-        targetIndex = 1;
-        Set<Rule> passRules = makeRules(solve());
-        for (Rule r : passRules)
-            System.out.println(r);
-        System.out.println("=============================");
-
-        BiConsumer<int[], int[]> intersection = (arr0, arr1) -> {
-            for (int i = 0; i < arr0.length; i++) {
-                arr0[i] &= arr1[i];
-            }
-        };
-        BinaryOperator<int[]> difference = (arr0, arr1) -> {
-            int[] rtn = arr0.clone();
-            for (int i = 0; i < rtn.length; i++) {
-                rtn[i] &= ~arr1[i];
-            }
-            return rtn;
-        };
-        int[] passAttr = new int[intAttrLen];
-        Arrays.fill(passAttr, Constants.BIT_MAX);
-        for (Rule r : passRules) {
-            intersection.accept(passAttr, r.getPremise());
-        }
-
-        for (Rule r : failRules) {
-            r.setPremise(difference.apply(r.getPremise(), passAttr));
-        }
-
-        return failRules;
+        return makeRules(solve());
     }
 
     private List<Concept> solve() {
@@ -77,12 +43,21 @@ public class ExploreConcepts {
         Queue<Triplet> exploration = new PriorityQueue<>();
         Queue<Triplet> nextExploration = new PriorityQueue<>(); // explorationを段階的にする
 
+        BinaryOperator<int[]> intersection = (arr0, arr1) -> {
+            int[] rtn = arr0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                rtn[i] &= arr1[i];
+            }
+            return rtn;
+        };
+
         // 初期状態
         Concept top = computeClosure(null, null);
         for (Triplet tri : getChildren(top, 0)) {
             exploration.add(tri);
         }
 
+        // 同じ段のコンセプトを保持しておくリストを用意
         Function<Queue<Triplet>, List<Concept>> makeLayer = exp -> {
             List<Concept> l = new ArrayList<>();
             for (Triplet tri : exp) {
@@ -90,7 +65,6 @@ public class ExploreConcepts {
             }
             return l;
         };
-        // 同じ段のコンセプトを保持しておくリスト
         List<Concept> layer = makeLayer.apply(exploration);
 
         while (!exploration.isEmpty()) {
@@ -115,6 +89,11 @@ public class ExploreConcepts {
                         continue;
 
                     for (Triplet tri : children) {
+                        // 成功トレースの集合が変化しないものは探索を打ち切る
+                        int[] parentPassSet = intersection.apply(s.getExtent(), objHas[1]);
+                        int[] childPassSet = intersection.apply(tri.getMap().getChild().getExtent(), objHas[1]);
+                        if (equal(parentPassSet, childPassSet))
+                            continue;
                         nextExploration.add(tri);
                     }
                 }
@@ -138,14 +117,6 @@ public class ExploreConcepts {
             int INTSIZE = Constants.INTSIZE;
             return (data[index / INTSIZE] & (1 << (INTSIZE - index % INTSIZE - 1))) != 0;
         };
-        BiPredicate<int[], int[]> arrEqual = (arr0, arr1) -> {
-            boolean rtn = true;
-            for (int i = 0; i < arr0.length; i++) {
-                if (arr0[i] != arr1[i])
-                    rtn = false;
-            }
-            return rtn;
-        };
         BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
             int[] rtn = origin.clone();
             int INTSIZE = Constants.INTSIZE;
@@ -163,7 +134,7 @@ public class ExploreConcepts {
                 boolean added = false;
                 // 親概念で内包がremovedと一致するものがあればその概念のStatisticsを利用
                 for (Concept candidate : c.getParentCandidates()) {
-                    if (arrEqual.test(candidate.getIntent(), removed)) {
+                    if (equal(candidate.getIntent(), removed)) {
                         rules.add(new Rule(removed, targetIndex, candidate.getStat()));
                         added = true;
                         break;
@@ -361,6 +332,15 @@ public class ExploreConcepts {
 
         return new Statistics(sup, conf, lift);
     }
+
+    boolean equal(int[] arr0, int[] arr1) {
+        for (int i = 0; i < arr0.length; i++) {
+            if (arr0[i] != arr1[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
 
     // int[] の立っているbit数を数える
     static int bitCount(int[] arr) {
