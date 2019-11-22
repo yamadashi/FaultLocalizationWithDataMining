@@ -34,41 +34,7 @@ public class ExploreConcepts {
     }
 
     public Set<Rule> run() {
-        Set<Rule> failRules = makeRules(solve());
-        for (Rule r : failRules)
-            System.out.println(r);
-        System.out.println("=============================");
-
-        // passの場合のルールも計算
-        targetIndex = 1;
-        Set<Rule> passRules = makeRules(solve());
-        for (Rule r : passRules)
-            System.out.println(r);
-        System.out.println("=============================");
-
-        BiConsumer<int[], int[]> intersection = (arr0, arr1) -> {
-            for (int i = 0; i < arr0.length; i++) {
-                arr0[i] &= arr1[i];
-            }
-        };
-        BinaryOperator<int[]> difference = (arr0, arr1) -> {
-            int[] rtn = arr0.clone();
-            for (int i = 0; i < rtn.length; i++) {
-                rtn[i] &= ~arr1[i];
-            }
-            return rtn;
-        };
-        int[] passAttr = new int[intAttrLen];
-        Arrays.fill(passAttr, Constants.BIT_MAX);
-        for (Rule r : passRules) {
-            intersection.accept(passAttr, r.getPremise());
-        }
-
-        for (Rule r : failRules) {
-            r.setPremise(difference.apply(r.getPremise(), passAttr));
-        }
-
-        return failRules;
+        return makeRules(solve());
     }
 
     private List<Concept> solve() {
