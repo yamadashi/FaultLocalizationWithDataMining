@@ -327,7 +327,7 @@ public class ExploreConcepts {
             if (child == null)
                 continue;
 
-            // 親conceptと内包が一致していない場合
+            // 親conceptとi以前の内包が一致していない場合
             for (int j = 0; j < i / INTSIZE; j++) {
                 if ((child.getIntent()[j] ^ par.getIntent()[j]) != 0) {
                     continue ATTR;
