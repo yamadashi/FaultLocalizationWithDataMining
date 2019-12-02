@@ -1,3 +1,5 @@
+package main;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
@@ -206,7 +208,7 @@ public class ExploreConcepts {
 
         objNum = buff.size();
         attrNum = maxAttrIndex + 1; // indexは0からなので
-        System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
+        // System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
         intObjLen = objNum / INTSIZE + 1;
         intAttrLen = attrNum / INTSIZE + 1;
 

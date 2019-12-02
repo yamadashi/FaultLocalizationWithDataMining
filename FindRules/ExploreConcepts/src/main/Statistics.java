@@ -1,3 +1,5 @@
+package main;
+
 public class Statistics {
     private int support;
     private float confidence;

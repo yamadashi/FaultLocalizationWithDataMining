@@ -1,3 +1,5 @@
+package main;
+
 class Pair<First, Second> {
     private First f;
     private Second s;
@@ -25,7 +27,7 @@ class Pair<First, Second> {
 
     @Override
     public String toString() {
-        return "("+f+", "+s+")";
+        return "(" + f + ", " + s + ")";
     }
 
 }

@@ -1,3 +1,5 @@
+package main;
+
 public class Rule {
     private Statistics stat;
     private int[] premise;

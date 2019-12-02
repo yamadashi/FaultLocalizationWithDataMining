@@ -1,3 +1,5 @@
+package main;
+
 public class Mapping {
     private Concept child;
     private int diff; // 差分属性の番号
@@ -17,6 +19,6 @@ public class Mapping {
 
     @Override
     public String toString() {
-        return "("+child+")→"+diff;
+        return "(" + child + ")→" + diff;
     }
 }
