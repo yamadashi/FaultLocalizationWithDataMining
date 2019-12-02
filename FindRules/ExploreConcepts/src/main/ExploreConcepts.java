@@ -45,6 +45,14 @@ public class ExploreConcepts {
         Queue<Triplet> exploration = new PriorityQueue<>();
         Queue<Triplet> nextExploration = new PriorityQueue<>(); // explorationを段階的にする
 
+        BinaryOperator<int[]> intersection = (arr0, arr1) -> {
+            int[] rtn = arr0.clone();
+            for (int i = 0; i < rtn.length; i++) {
+                rtn[i] &= arr1[i];
+            }
+            return rtn;
+        };
+
         // 初期状態
         Concept top = computeClosure(null, null);
         for (Triplet tri : getChildren(top, 0)) {
@@ -83,6 +91,11 @@ public class ExploreConcepts {
                         continue;
 
                     for (Triplet tri : children) {
+                        // 成功トレースの集合が変化しないものは探索を打ち切る
+                        int[] parentPassSet = intersection.apply(s.getExtent(), objHas[1]);
+                        int[] childPassSet = intersection.apply(tri.getMap().getChild().getExtent(), objHas[1]);
+                        if (equal(parentPassSet, childPassSet))
+                            continue;
                         nextExploration.add(tri);
                     }
                 }
