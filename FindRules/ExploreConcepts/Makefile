@@ -2,20 +2,27 @@ INPUT:=data/data.csv
 #OUTPUT:=
 MINSUP:=30
 MINCONF:=0.5
+INTERVAL:=5
 
 build:
-	javac -d ExploreConcepts/bin -cp ExploreConcepts/src ExploreConcepts/src/Main.java
+	javac -d bin/ -cp src src/main/Main.java
 
 exec:
-	java -cp ExploreConcepts/bin Main $(INPUT) $(MINSUP) $(MINCONF)
+	java -cp bin main.Main $(INPUT) $(MINSUP) $(MINCONF)
 
 run:
-	javac -d ExploreConcepts/bin -cp ExploreConcepts/src ExploreConcepts/src/Main.java
-	java -cp ExploreConcepts/bin Main $(INPUT) $(MINSUP) $(MINCONF)
+	javac -d bin/main -cp src src/main/Main.java
+	java -cp bin main.Main $(INPUT) $(MINSUP) $(MINCONF)
 
 run/test:
 	$(MAKE) run INPUT=data/testdata MINSUP=2
 
 clean:
-	- rm ExploreConcepts/bin/*.class
+	- rm bin/main/*.class
 	#- rm $(OUTPUT)
+
+build/mem:
+	javac -d bin/ -cp src src/memmonitor/Main.java
+
+exec/mem:
+	java -cp bin memmonitor.Main $(INPUT) $(MINSUP) $(MINCONF) $(INTERVAL)
