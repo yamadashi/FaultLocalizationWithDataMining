@@ -10,7 +10,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
 public class ExploreConcepts {
@@ -93,7 +92,6 @@ public class ExploreConcepts {
     }
 
     // 拡張でnegObjsSetが不変かチェック. thisIntentは0(targetIndex), 1を含まない.
-    // differenceを使う
     private boolean checkKeepNegObjsSet(int[] thisExtent, int[] newExtent) {
         int[] diff = SetOperation.xor(thisExtent, newExtent);
         int[] diffofNegObjs = SetOperation.intersection(diff, negObjs);
@@ -216,8 +214,9 @@ public class ExploreConcepts {
                     CloseByOne.printBit(ppcExtMask);
                     continue ATTR;
                 } else {// lift値check
-
-                    Concept con = new Concept(newExtent, remTargetAttrs(newIntent), calcStat(newExtent), ppcExtMask);
+                    int[] targetSet = SetOperation.makeSet(intAttrLen, 0, 1);
+                    Concept con = new Concept(newExtent, SetOperation.difference(newIntent, targetSet),
+                            calcStat(newExtent), ppcExtMask);
                     childNodes.add(new Couple(con, X));
                     System.out.println("concept gentd: " + con.toString());
                     float newLift = con.getStat().getLift();
