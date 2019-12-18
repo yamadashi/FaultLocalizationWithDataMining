@@ -6,23 +6,19 @@ import java.util.Set;
 
 public class Main {
     public static void main(String[] args) {
-//        String filename = args[0];
-//        int minsup = Integer.parseInt(args[1]);
-//        float minconf = Float.parseFloat(args[2]);
-        String filename =  "C:\\Users\\seki\\workspace\\yamada-CellierExploreConcepts\\data\\testdata";
-        //      int minsup = Integer.parseInt(args[0]);
-        int minsup = 1;
-        //      float minconf = Float.parseFloat(args[2]);
-        float minconf = 0.1f;  // 0.1f (original)
+        String filename = args[0];
+        int minsup = Integer.parseInt(args[1]);
+        float minconf = Float.parseFloat(args[2]);
         int targetIndex = 0; // ルールの後件となる属性のインデックス
         int negObjIndex = 1; // targetIndex属性の反対属性のインデックス
         String ruleMiner = "";
-        //ruleMiner = "Cellier"; // yamada20191114版
-        ruleMiner = "cbo";     // cbo版(depth-first, ppc拡大: uptoBit使う)
-        ruleMiner = "withPruning-cbo";     // pruning付きCellier+cbo版(ppc拡大: uptoBit使う)
+        // ruleMiner = "Cellier"; // yamada20191114版
+        ruleMiner = "cbo"; // cbo版(depth-first, ppc拡大: uptoBit使う)
+        ruleMiner = "withPruning-cbo"; // pruning付きCellier+cbo版(ppc拡大: uptoBit使う)
         System.out.println("\nfile:" + filename + "\nminsup:" + minsup + "\nminconf:" + minconf);
 
-        Set<Rule> unorderedRules = new ExploreConcepts(filename, minsup, minconf, targetIndex, negObjIndex).run(ruleMiner);
+        Set<Rule> unorderedRules = new ExploreConcepts(filename, minsup, minconf, targetIndex, negObjIndex)
+                .run(ruleMiner);
         List<Rule> rules = new ArrayList<Rule>(unorderedRules);
         // リフト順に並び替え
         Collections.sort(rules, new Comparator<Rule>() {

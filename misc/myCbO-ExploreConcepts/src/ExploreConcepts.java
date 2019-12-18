@@ -68,12 +68,6 @@ public class ExploreConcepts {
             Pair<Pair<Boolean, Boolean>, Statistics> filterRes = FILTER(couple.getConcept().getExtent());
             boolean KEEP = filterRes.getFirst().getFirst();
             boolean CONTINUE = filterRes.getFirst().getSecond();
-            if (couple.getConcept().getIntent()[0] == 1207959552) { // magic number?
-                System.out.println("current polled concept: " + couple.getConcept().toString());
-                System.out.println("(KEEP, CONTINUE): " + KEEP + ", " + CONTINUE);
-
-            }
-
             if (KEEP || CONTINUE) {
                 if (KEEP) {
                     System.out.println("concept to sol: " + couple.getConcept().toString());
@@ -132,9 +126,6 @@ public class ExploreConcepts {
         System.out.println("initQueue (not ordered) : " + initial.size());
         for (Couple elm : initial) {
             System.out.println(elm.toString());
-            // int dec = elm.getConcept().getIntent()[0];
-            // System.out.println(elm.getConcept().getExtent()[0] + ", "+
-            // elm.getConcept().getIntent()[0]);
         }
         System.out.println("=== end of initQueue =========================");
 
@@ -194,7 +185,7 @@ public class ExploreConcepts {
                 }
             }
             // start_intのbit列のdiff check
-            int diff = (newIntent[start_int] ^ thisIntent[start_int]) & upto_bit[start_bit]; // upto_bitまでの差分
+            int diff = (newIntent[start_int] ^ thisIntent[start_int]) & upto[start_bit]; // upto_bitまでの差分
             diff &= ~ppcExtMask[start_int]; // ppcExtMaskでマスキング
             if (diff != 0) {
                 continue;
@@ -223,10 +214,8 @@ public class ExploreConcepts {
                     if (this.currentBestVal <= newLift) {
                         this.currentBestVal = newLift;
                         this.bestRules.add(calcRule(con));
-                        continue ATTR;
-                    } else {
-                        continue ATTR;
                     }
+                    continue ATTR;
                     // initial.add(new Couple(con, X));
                 }
 
@@ -307,12 +296,12 @@ public class ExploreConcepts {
         // 局所的なヘルパー関数群
         BiPredicate<int[], Integer> flagIsSet = (data, index) -> {
             int INTSIZE = Constants.INTSIZE;
-            return (data[index / INTSIZE] & (1 << (index % INTSIZE - 1))) != 0;
+            return (data[index / INTSIZE] & (1 << (INTSIZE - index % INTSIZE - 1))) != 0;
         };
         BiFunction<int[], Integer, int[]> flagUnset = (origin, index) -> {
             int[] rtn = origin.clone();
             int INTSIZE = Constants.INTSIZE;
-            rtn[index / INTSIZE] &= ~(1 << (index % Constants.INTSIZE - 1));
+            rtn[index / INTSIZE] &= ~(1 << (INTSIZE - index % INTSIZE - 1));
             return rtn;
         };
         UnaryOperator<int[]> calcExtent = intent -> {
@@ -332,8 +321,6 @@ public class ExploreConcepts {
         Rule rule = null;
         if (flagIsSet.test(intent, targetIndex)) { // intentにtargetIndex(ルール結論部の属性)が含まれる
             int[] removed = flagUnset.apply(intent, targetIndex);
-            if (SetOperation.size(removed) == 0)
-                removed = new int[intAttrLen];
             rule = new Rule(removed, targetIndex, calcStat(calcExtent.apply(removed)));
         } else {
             rule = new Rule(con.getIntent(), targetIndex, con.getStat());
@@ -344,11 +331,7 @@ public class ExploreConcepts {
     private Pair<Pair<Boolean, Boolean>, Statistics> FILTER(int[] ext) {
 
         Statistics stat = calcStat(ext);
-        if (ext[0] == 1342177280) {
-            System.out.println("ext[0]");
-            CloseByOne.printBit(ext[0]);
-            System.out.println("(supp, conf): " + stat.getSupp() + ", " + stat.getConf());
-        }
+
         boolean KEEP = stat.getSupp() >= minsupp && stat.getConf() >= minconf;
         boolean CONTINUE = stat.getSupp() >= minsupp;
 
@@ -438,10 +421,7 @@ public class ExploreConcepts {
                 }
             }
         }
-        negObjs = new int[intObjLen];
-        for (int i = 0; i < intObjLen; i++) {
-            negObjs[i] = objHas[this.negObjIndex][i];
-        }
+        negObjs = objHas[negObjIndex];
     }
 
     private Statistics calcStat(int[] ext) {
