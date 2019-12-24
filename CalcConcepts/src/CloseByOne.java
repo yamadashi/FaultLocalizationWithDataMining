@@ -42,7 +42,7 @@ class CloseByOne {
 		Concept top = createTopConcept();
 
 		long startTime = System.currentTimeMillis();
-		generateFromNode(top, 0);
+		generateFromNode(top, 2); // targetAttr(0, 1)はパスする
 		System.out.println("#mining time = " + (System.currentTimeMillis() - startTime));
 
 		System.out.println("#concept = " + conceptCount);
@@ -183,11 +183,11 @@ class CloseByOne {
 			}
 		}
 
-		if (filter.equals("lift") || filter.equals("all")) {
-			int[] topPPCExtMask = SetOperation.makeSet(intAttrLen, 0, 1);
-			return new ConceptWrapper(extent, intent, topPPCExtMask);
-		} else
-			return new Concept(extent, intent);
+		int[] targetSet = SetOperation.makeSet(intAttrLen, 0, 1);
+		if (filter.equals("lift") || filter.equals("all"))
+			return new ConceptWrapper(extent, intent, targetSet);
+		else
+			return new Concept(extent, intent, targetSet);
 
 	}
 

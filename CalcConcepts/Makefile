@@ -1,4 +1,4 @@
-INPUT:=data/simple.txt
+INPUT:=data/lift-cut.txt
 FILTER:=none # support, lift, all
 MINSUP:=0
 

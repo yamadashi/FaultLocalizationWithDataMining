@@ -1,13 +1,7 @@
 class ConceptWrapper extends Concept {
-    private int[] ppcExtMask;
 
     public ConceptWrapper(int[] ex, int[] in, int[] ppcExtMask) {
-        super(ex, in);
-        this.ppcExtMask = ppcExtMask;
-    }
-
-    public int[] getPPCExtMask() {
-        return ppcExtMask;
+        super(ex, in, ppcExtMask);
     }
 
     @Override
@@ -18,27 +12,13 @@ class ConceptWrapper extends Concept {
     @Override
     public boolean checkPPC(int current, Concept prev, int[] upto, int[] negObjs) {
         // 成功集合を保存
-        int[] extDiff = SetOperation.xor(prev.getExtent(), extent);
-        int[] extDiffofNegObjs = SetOperation.intersection(extDiff, negObjs);
-        if (SetOperation.size(extDiffofNegObjs) == 0) { // ppcExtMaskの更新と探索の打ち切り
-            ConceptWrapper prevCW = (ConceptWrapper) prev; // アップキャストしてごめんなさい
-            prevCW.ppcExtMask[current / INTSIZE] |= (BIT << (INTSIZE - 1 - current % INTSIZE));
-            ppcExtMask = prevCW.ppcExtMask.clone();
+        int[] diff = SetOperation.xor(prev.getExtent(), extent);
+        int[] diffofNegObjs = SetOperation.intersection(diff, negObjs);
+        if (SetOperation.size(diffofNegObjs) == 0) { // ppcExtMaskの更新と探索の打ち切り
+            prev.ppcExtMask[current / INTSIZE] |= (BIT << (INTSIZE - 1 - current % INTSIZE));
+            ppcExtMask = prev.ppcExtMask.clone();
             return false;
         }
-
-        for (int i = 0; i < current / INTSIZE; i++) {
-            int diff = intent[i] ^ prev.getIntent()[i];
-            diff &= ~ppcExtMask[i];
-            if (diff != 0) {
-                return false;
-            }
-        }
-        int diff = intent[current / INTSIZE] ^ prev.getIntent()[current / INTSIZE];
-        diff &= ~ppcExtMask[current / INTSIZE];
-        if ((diff & upto[current % INTSIZE]) != 0) {
-            return false;
-        }
-        return true;
+        return super.checkPPC(current, prev, upto, null);
     }
 }
