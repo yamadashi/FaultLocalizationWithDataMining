@@ -1,12 +1,12 @@
 // 概念
-public class Concept {
+public class Concept implements Cloneable {
     private int id;
-    private int[] extent; // 外延
-    private int[] intent; // 内包
+    protected int[] extent; // 外延
+    protected int[] intent; // 内包
 
     private static int nextID = 0;
-    private static final int INTSIZE = Integer.SIZE;
-    private static final int BIT = 1;
+    protected static final int INTSIZE = Integer.SIZE;
+    protected static final int BIT = 1;
 
     public Concept(int[] ex, int[] in) {
         this.extent = ex;
@@ -46,5 +46,22 @@ public class Concept {
         }
         str += "}";
         return str;
+    }
+
+    @Override
+    public Concept clone() {
+        return new Concept(extent.clone(), intent.clone());
+    }
+
+    public boolean checkPPC(int current, Concept prev, int[] upto, int[] negObjs) {
+        for (int i = 0; i < current / INTSIZE; i++) {
+            if ((intent[i] ^ prev.getIntent()[i]) != 0) {
+                return false;
+            }
+        }
+        if (((intent[current / INTSIZE] ^ prev.getIntent()[current / INTSIZE]) & upto[current % INTSIZE]) != 0) {
+            return false;
+        }
+        return true;
     }
 }

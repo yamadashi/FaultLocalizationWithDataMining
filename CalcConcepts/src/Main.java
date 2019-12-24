@@ -7,7 +7,7 @@ public class Main {
 			minsup = Float.parseFloat(args[2]);
 		}
 
-		System.out.println("target: " + file + ", filter:" + filter + ", minsup:" + minsup);
+		System.out.println("#target: " + file + ", filter:" + filter + ", minsup:" + minsup);
 		new CloseByOne(file, filter, minsup).run();
 	}
 }

@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.BiPredicate;
 
 class CloseByOne {
 	static final int BIT_MAX = Integer.MAX_VALUE * 2 + 1;
@@ -27,15 +28,23 @@ class CloseByOne {
 	private int[] upto = new int[INTSIZE];
 	private int[][] cols = null; // ある属性をもつオブジェクトの集合
 
+	private BiPredicate<int[], int[]> filterFunc = null;
+
 	public CloseByOne(String file, String filter, float minSupRate) {
-		context = readContext(file);
 		this.filter = filter;
 		this.minSupRate = minSupRate;
+		context = readContext(file);
 		prepare();
 	}
 
 	public void run() {
-		calcConcepts();
+
+		Concept top = createTopConcept();
+
+		long startTime = System.currentTimeMillis();
+		generateFromNode(top, 0);
+		System.out.println("#mining time = " + (System.currentTimeMillis() - startTime));
+
 		System.out.println("#concept = " + conceptCount);
 	}
 
@@ -70,7 +79,7 @@ class CloseByOne {
 		if (minSupport == 0) {
 			minSupport = 1;
 		}
-		System.out.println("attr:" + attrNum + "\n" + "obj:" + objNum);
+		System.out.println("#attr:" + attrNum + " " + "obj:" + objNum);
 		intObjLen = objNum / INTSIZE + 1;
 		intAttrLen = attrNum / INTSIZE + 1;
 
@@ -107,45 +116,45 @@ class CloseByOne {
 			}
 		}
 
-	}
-
-	private void calcConcepts() {
-		Concept top = createTopConcept();
-
-		long startTime = System.currentTimeMillis();
-		generateFromNode(top, 0);
-		System.out.println(" mining time = " + (System.currentTimeMillis() - startTime));
+		switch (filter) {
+		case "all":
+		case "support":
+			filterFunc = (int[] prevExt, int[] newExt) -> {
+				int supp = SetOperation.size(SetOperation.intersection(newExt, cols[targetIndex]));
+				return supp >= minSupport;
+			};
+			break;
+		case "lift":
+			filterFunc = (int[] prevExt, int[] newExt) -> true;
+			break;
+		case "none":
+		default:
+			filterFunc = (int[] prevExt, int[] newExt) -> SetOperation.size(newExt) >= minSupport;
+			break;
+		}
 	}
 
 	private void generateFromNode(Concept concept, int attrOffset) {
+
 		int[] intent = concept.getIntent();
-		ATTR: for (int attr = attrOffset; attr < attrNum; attr++) {
+		for (int attr = attrOffset; attr < attrNum; attr++) {
 			// 最後の属性に達したとき
 			if (attr >= attrNum)
 				return;
 			// 追加する属性をすでに内包として持ってい場合、あるいは最小サポートを超えない場合
-			int supp = supps[attr];
+			int attrSupp = supps[attr];
 			int mask = BIT << (INTSIZE - 1 - attr % INTSIZE);
-			if ((intent[attr / INTSIZE] & mask) != 0 || supp < minSupport) {
+			if ((intent[attr / INTSIZE] & mask) != 0 || attrSupp < minSupport) {
 				continue;
 			}
 
 			Concept newConcept = computeClosure(concept, cols[attr]);
-			// 最小サポートを超えない場合
-
-			if (calcSupp(newConcept) < minSupport) {
+			boolean filterRes = filterFunc.test(concept.getExtent(), newConcept.getExtent());
+			if (!filterRes)
 				continue;
-			}
-			int[] newIntent = newConcept.getIntent();
-			// conceptとnewConceptにおいて、現在走査中の属性までの内包が一致していない場合
-			for (int i = 0; i < attr / INTSIZE; i++) {
-				if ((newIntent[i] ^ intent[i]) != 0) {
-					continue ATTR;
-				}
-			}
-			if (((newIntent[attr / INTSIZE] ^ intent[attr / INTSIZE]) & upto[attr % INTSIZE]) != 0) {
+			// prefixを保存するか
+			if (!newConcept.checkPPC(attr, concept, upto, cols[negativeIndex]))
 				continue;
-			}
 
 			conceptCount++;
 			System.out.println(newConcept);
@@ -173,15 +182,21 @@ class CloseByOne {
 				intent[i] &= context[intAttrLen * j + i];
 			}
 		}
-		return new Concept(extent, intent);
+
+		if (filter.equals("lift") || filter.equals("all")) {
+			int[] topPPCExtMask = SetOperation.makeSet(intAttrLen, 0, 1);
+			return new ConceptWrapper(extent, intent, topPPCExtMask);
+		} else
+			return new Concept(extent, intent);
+
 	}
 
 	private Concept computeClosure(Concept prev, int[] attrExtent) {
 
-		int[] extent = new int[intObjLen];
-		int[] intent = new int[intAttrLen];
+		Concept newConcept = prev.clone();
+		int[] extent = newConcept.getExtent();
+		int[] intent = newConcept.getIntent();
 
-		Arrays.fill(extent, 0);
 		Arrays.fill(intent, BIT_MAX);
 
 		for (int i = 0; i < intObjLen; i++) {
@@ -197,26 +212,7 @@ class CloseByOne {
 				}
 			}
 		}
-		Concept newConcept = new Concept(extent, intent);
 		return newConcept;
-	}
-
-	private int calcSupp(Concept con) {
-		if (filter.equals("support") | filter.equals("all"))
-			return calcRuleSupp(con);
-		else
-			return SetOperation.size(con.getExtent());
-	}
-
-	private int calcRuleSupp(Concept con) {
-		return SetOperation.size(SetOperation.intersection(con.getExtent(), cols[targetIndex]));
-	}
-
-	private float calcLift(Concept con) {
-		int sup = calcRuleSupp(con);
-		float conf = (float) sup / SetOperation.size(con.getExtent());
-		float lift = conf / ((float) SetOperation.size(cols[targetIndex]) / objNum);
-		return lift;
 	}
 
 	public void printBit(int bit) {
