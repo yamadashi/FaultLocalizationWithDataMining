@@ -1,12 +1,13 @@
 public class Main {
 	public static void main(String[] args) {
 		String file = args[0];
-		int minsupp = 0;
-		if (args.length > 1)
-			minsupp = Integer.parseInt(args[1]);
+		String filter = args[1];
+		float minsup = 0f;
+		if (filter.equals("support") || filter.equals("all")) {
+			minsup = Float.parseFloat(args[2]);
+		}
 
-		System.out.println("target: " + file);
-		CloseByOne CbO = new CloseByOne(file, minsupp);
-		CbO.main();
+		System.out.println("target: " + file + ", filter:" + filter + ", minsup:" + minsup);
+		new CloseByOne(file, filter, minsup).run();
 	}
 }
