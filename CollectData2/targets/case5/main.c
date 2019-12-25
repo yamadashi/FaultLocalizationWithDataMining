@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     expected = atoi(argv[5]);
 
     int result = tritype(input[0], input[1], input[2]);
-    fprintf(fp, "%d,", (result == expected)); //成功なら1失敗なら0
+    fprintf(fp, "%d", (result == expected)); //成功なら1失敗なら0
 
     fclose(fp);
 
