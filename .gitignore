@@ -21,3 +21,5 @@
 
 /misc/nagao/src/main/*
 !/misc/nagao/src/main/*.java
+
+/tmp/*
