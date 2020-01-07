@@ -74,7 +74,7 @@ public class AdjustRatio {
     private static float calcRatio(List<String> lines) {
         int failNum = 0;
         for (String line : lines) {
-            if (Integer.parseInt(line.split(",", 2)[0]) == 0) {
+            if (Integer.parseInt(line.split(" ", 2)[0]) == 0) {
                 failNum++;
             }
         }
@@ -84,7 +84,7 @@ public class AdjustRatio {
     private static List<String> getFailObj(List<String> lines) {
         List<String> failObj = new ArrayList<>();
         for (String line : lines) {
-            if (Integer.parseInt(line.split(",", 2)[0]) == 0) {
+            if (Integer.parseInt(line.split(" ", 2)[0]) == 0) {
                 failObj.add(line);
             }
         }

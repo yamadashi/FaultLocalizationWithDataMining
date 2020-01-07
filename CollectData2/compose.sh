@@ -2,15 +2,16 @@
 covfile="tritype.c.gcov"
 testfile="testdata"
 stdpath=$PWD/`dirname $0`
+outputfile="data.txt"
 
 
 function exec() {
     cd $targetdir
-    ./main.exe $outputdir/data.csv $1 $2 $3 $4
+    ./main.exe $outputdir/$outputfile $1 $2 $3 $4
     gcov tritype.c > /dev/null
 
     cd $stdpath/ProcTraceInfo
-    java TraceInfoProcessor $targetdir/$covfile $outputdir/data.csv
+    java TraceInfoProcessor $targetdir/$covfile $outputdir/$outputfile
 
     cd $targetdir
     rm *.gcda *.c.gcov
@@ -24,7 +25,8 @@ function func() {
     javac -encoding UTF8 TraceInfoProcessor.java
 
     mkdir $outputdir
-    touch $outputdir/data.csv
+    rm $outputdir/$outputfile
+    touch $outputdir/$outputfile
     
     #各テスト入力について実行
     cat $stdpath/testdata/$testfile | while read line
