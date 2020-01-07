@@ -66,4 +66,8 @@ public class Concept implements Cloneable {
         }
         return true;
     }
+
+    public static int getGeneratedCount() {
+        return nextID;
+    }
 }

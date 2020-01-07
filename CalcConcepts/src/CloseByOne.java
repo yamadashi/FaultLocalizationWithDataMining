@@ -17,8 +17,9 @@ class CloseByOne {
 	private int[] context = null; // 文脈
 	private int[] supps = null; // 各属性のサポート
 
-	private float minSupRate = 0.00f; // オブジェクト数の何％を最小サポートとするか
-	private int minSupport = 1; // 最小サポート
+	private float minRuleSupRate = 0.00f; // オブジェクト数の何％を最小サポートとするか(ルールのサポート)
+	private int minRuleSupport = 1; // 最小サポート(ルールのサポート)
+	private final int minSupport = 1; // 概念の最小サポート(今回は1で固定)
 	private String filter = "none";
 	private int conceptCount = 0; // 概念の数
 
@@ -32,7 +33,7 @@ class CloseByOne {
 
 	public CloseByOne(String file, String filter, float minSupRate) {
 		this.filter = filter;
-		this.minSupRate = minSupRate;
+		this.minRuleSupRate = minSupRate;
 		context = readContext(file);
 		prepare();
 	}
@@ -46,6 +47,7 @@ class CloseByOne {
 		System.out.println("#mining time = " + (System.currentTimeMillis() - startTime));
 
 		System.out.println("#concept = " + conceptCount);
+		System.out.println("#generated = " + Concept.getGeneratedCount());
 	}
 
 	// 入力ファイルから文脈データを読み取る
@@ -75,9 +77,9 @@ class CloseByOne {
 
 		objNum = buff.size();
 		attrNum = maxAttrIndex + 1; // indexは0からなので
-		minSupport = (int) (minSupRate * objNum);
-		if (minSupport == 0) {
-			minSupport = 1;
+		minRuleSupport = (int) (minRuleSupRate * objNum);
+		if (minRuleSupport == 0) {
+			minRuleSupport = 1;
 		}
 		System.out.println("#attr:" + attrNum + " " + "obj:" + objNum);
 		intObjLen = objNum / INTSIZE + 1;
@@ -121,12 +123,10 @@ class CloseByOne {
 		case "support":
 			filterFunc = (int[] prevExt, int[] newExt) -> {
 				int supp = SetOperation.size(SetOperation.intersection(newExt, cols[targetIndex]));
-				return supp >= minSupport;
+				return supp >= minRuleSupport;
 			};
 			break;
 		case "lift":
-			filterFunc = (int[] prevExt, int[] newExt) -> true;
-			break;
 		case "none":
 		default:
 			filterFunc = (int[] prevExt, int[] newExt) -> SetOperation.size(newExt) >= minSupport;

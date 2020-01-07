@@ -1,7 +1,8 @@
 #!/bin/bash
 
-filters=("support" "all")
+make build
 
+filters=("none" "support" "lift" "all")
 ls data/tritype/ -1 | while read each_case; do
     outputdir=output/tritype/${each_case}
     outputfile=${outputdir}/output.txt
