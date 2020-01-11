@@ -7,3 +7,9 @@ create/test:
 
 create/context:
 	./compose.sh
+
+adjust:
+	AdjustRatio/adjust.sh
+
+shrink:
+	

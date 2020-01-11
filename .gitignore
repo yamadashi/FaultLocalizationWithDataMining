@@ -11,12 +11,7 @@
 !/CollectData/testdata/src/*.h
 !/CollectData/testdata/src/*.c
 
-/CollectData2/ProcTraceInfo/*
-!/CollectData2/ProcTraceInfo/*.java
-
-/CollectData2/testdata/src/*
-!/CollectData2/testdata/src/*.h
-!/CollectData2/testdata/src/*.c
+*.class
 
 /CalcConcepts/bin/*
 
