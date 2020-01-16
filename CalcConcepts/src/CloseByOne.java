@@ -22,6 +22,8 @@ class CloseByOne {
 	private final int minSupport = 1; // 概念の最小サポート(今回は1で固定)
 	private String filter = "none";
 	private int conceptCount = 0; // 概念の数
+	private Concept maxLiftConcept;
+	private float maxLift = 0;
 
 	private final int targetIndex = 0;
 	private final int negativeIndex = 1;
@@ -48,6 +50,8 @@ class CloseByOne {
 
 		System.out.println("#concept = " + conceptCount);
 		System.out.println("#generated = " + Concept.getGeneratedCount());
+		System.out.println("bestLiftRule : (lift:" + maxLift + ") " + SetOperation.toString(maxLiftConcept.getIntent())
+				+ " -> fail");
 	}
 
 	// 入力ファイルから文脈データを読み取る
@@ -157,6 +161,11 @@ class CloseByOne {
 				continue;
 
 			conceptCount++;
+			float newLift = calcLift(newConcept);
+			if (newLift > maxLift) {
+				maxLift = newLift;
+				maxLiftConcept = newConcept;
+			}
 			System.out.println(newConcept);
 
 			generateFromNode(newConcept, attr + 1);
@@ -213,6 +222,14 @@ class CloseByOne {
 			}
 		}
 		return newConcept;
+	}
+
+	private float calcLift(Concept c) {
+		// lift = (|ext_c ∩ fail| / |ext_c|) / (|fail| / |all|)
+		int[] ext = c.getExtent();
+		int[] fail = cols[targetIndex];
+		int ext_cap_fail = SetOperation.size(SetOperation.intersection(ext, fail));
+		return ((float) ext_cap_fail / SetOperation.size(ext)) / ((float) SetOperation.size(fail) / objNum);
 	}
 
 	public void printBit(int bit) {
