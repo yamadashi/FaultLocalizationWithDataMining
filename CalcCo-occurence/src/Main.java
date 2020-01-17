@@ -1,6 +1,7 @@
 import java.util.*;
 import java.io.*;
 import java.util.function.*;
+import java.util.Array;
 
 public class Main {
 
@@ -17,10 +18,11 @@ public class Main {
 		System.out.println("# min co-occurence : " + minCooccurence);
 
 		objSets = getObjSets(file);
+		System.out.println("# lines : " + (attrNum - 2)); // pass,failを除く
 		System.out.println("# fail : " + SetOperation.size(objSets.get(0)));
 
 		int co_occCount = 0; // 共起度が閾値を超える数
-		// 行属性のみ共起度計算
+		// 行属性のみ(fail,passは除く)共起度計算
 		for (int i = 2; i < attrNum; i++) {
 			float coocc = calcCooccurence(i);
 			if (coocc >= minCooccurence) {
@@ -36,18 +38,20 @@ public class Main {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(file)));
 			String line = "";
+			int maxAttrIndex = 0;
 			while ((line = br.readLine()) != null) {
 				String[] splitLine = line.split(" ");
 				int[] attrIndices = new int[splitLine.length];
 				for (int i = 0; i < attrIndices.length; i++) {
 					attrIndices[i] = Integer.parseInt(splitLine[i]);
-					if (attrNum < attrIndices[i]) {
-						attrNum = attrIndices[i];
+					if (maxAttrIndex < attrIndices[i]) {
+						maxAttrIndex = attrIndices[i];
 					}
 				}
 				buff.add(attrIndices);
 			}
 			objNum = buff.size();
+			attrNum = maxAttrIndex + 1; // 属性番号は0から数えるので
 			intObjLen = objNum / INTSIZE + 1;
 			br.close();
 		} catch (Exception e) {
